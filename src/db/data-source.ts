@@ -1,8 +1,7 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
-import { loadConfig } from '../config/configuration.js';
-
+import { loadConfig } from '../config/configuration.ts';
 config();
 
 export const AppDataSource = new DataSource({
