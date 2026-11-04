@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { HealthController } from './health/health.controller.ts';
 import { APP_CONFIG, AppConfigModule } from './config/config.module.ts';
 import type { AppConfig } from './config/configuration.ts';
+import { OrganizationsModule } from './organizations/organizations.module.ts';
 
 @Module({
   imports: [
@@ -14,9 +15,10 @@ import type { AppConfig } from './config/configuration.ts';
         url: cfg.db.url,
         synchronize: false,
         logging: ['error'],
-        entities: [import.meta.dirname + '/entities/*.entity.js'],
+        entities: [import.meta.dirname + '/**/*.entity.js'],
       }),
     }),
+    OrganizationsModule,
   ],
   controllers: [HealthController],
 })
