@@ -13,6 +13,12 @@ services:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@payment-db:5432/${POSTGRES_DB}?sslmode=disable
     depends_on:
       payment-db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     networks: [wassimo-network]
 
   payment-db:

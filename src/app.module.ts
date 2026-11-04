@@ -1,9 +1,24 @@
 import { Module } from '@nestjs/common';
-import { HealthController } from './health/health.controller.js';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { HealthController } from './health/health.controller.ts';
+import { APP_CONFIG, AppConfigModule } from './config/config.module.ts';
+import type { AppConfig } from './config/configuration.ts';
 
 @Module({
-  imports: [],
+  imports: [
+    AppConfigModule,
+    TypeOrmModule.forRootAsync({
+      inject: [APP_CONFIG],
+      useFactory: (cfg: AppConfig) => ({
+        type: 'postgres' as const,
+        url: cfg.db.url,
+        synchronize: false,
+        logging: ['error'],
+        entities: [import.meta.dirname + '/entities/*.entity.js'],
+      }),
+    }),
+  ],
   controllers: [HealthController],
-  providers: [],
 })
+
 export class AppModule {}
