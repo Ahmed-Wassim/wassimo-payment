@@ -11,21 +11,21 @@ export class Organization {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', length: 255, unique: true })
   slug!: string;
 
-  @Column()
+  @Column({ type: 'varchar', length: 255 })
   name!: string;
 
   @Column({ name: 'is_platform', default: false })
   isPlatform!: boolean;
 
-  @Column({ default: 'active' })
+  @Column({ type: 'varchar', length: 255, default: 'active' })
   status!: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
 }
