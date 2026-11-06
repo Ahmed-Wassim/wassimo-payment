@@ -6,6 +6,7 @@ import type { AppConfig } from './config/configuration.ts';
 import { OrganizationsModule } from './organizations/organizations.module.ts';
 import { CurrenciesModule } from './currencies/currencies.module.ts';
 import { ApplicationsModule } from './applications/applications.module.js';
+import { CredentialsModule } from './credentials/credentials.module.js';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ApplicationsModule } from './applications/applications.module.js';
     OrganizationsModule,
     CurrenciesModule,
     ApplicationsModule,
+    CredentialsModule,
   ],
   controllers: [HealthController],
 })
