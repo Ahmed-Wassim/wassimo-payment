@@ -5,6 +5,7 @@ import { APP_CONFIG, AppConfigModule } from './config/config.module.ts';
 import type { AppConfig } from './config/configuration.ts';
 import { OrganizationsModule } from './organizations/organizations.module.ts';
 import { CurrenciesModule } from './currencies/currencies.module.ts';
+import { ApplicationsModule } from './applications/applications.module.js';
 
 @Module({
   imports: [
@@ -16,13 +17,14 @@ import { CurrenciesModule } from './currencies/currencies.module.ts';
         url: cfg.db.url,
         synchronize: false,
         logging: ['error'],
+        uuidExtension: 'pgcrypto',
         entities: [import.meta.dirname + '/**/*.entity.js'],
       }),
     }),
     OrganizationsModule,
     CurrenciesModule,
+    ApplicationsModule,
   ],
   controllers: [HealthController],
 })
-
 export class AppModule {}
