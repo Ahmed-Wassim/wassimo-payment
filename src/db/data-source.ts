@@ -9,6 +9,6 @@ export const AppDataSource = new DataSource({
   url: loadConfig().db.url,
   synchronize: false,
   logging: ['error'],
-  entities: ['src/**/*.entity.ts'],
+  entities: [], // migrations bring their own schema; the CLI doesn't need entities
   migrations: ['src/db/migrations/*.ts'],
 });
