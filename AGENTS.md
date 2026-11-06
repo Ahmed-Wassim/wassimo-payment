@@ -58,14 +58,15 @@ mid-flight.
 
 ## Migration workflow (entity-first, from step 05 on)
 
-1. Scaffold: `nest g module <name>` + `nest g service <name>`
+1. Scaffold: `nest g module <name>` + `nest g service <name>` (delete the
+   auto-generated `*.service.spec.ts` — no tests for now)
 2. Write the ENTITY first (`<name>/<thing>.entity.ts`)
 3. `npx tsc` (builds `dist/`)
-4. `npm run migration:create -- src/db/migrations/<Name>` if a bare
-   skeleton is needed, or — preferred — `npm run migration:generate`
-   TODO (data-source glob work pending, see Known issues)
-5. Hand-add seed/config INSERTs into the generated migration
-   (generate only produces DDL)
+4. `npm run migration:generate -- src/db/migrations/<Name>` (entities read
+   from compiled `dist/**/*.entity.js` — run `npx tsc` FIRST, see cache trap)
+5. Hand-edit the generated file before running: change the import line to
+   `import type { MigrationInterface, QueryRunner } from 'typeorm';`,
+   then hand-add seed/config INSERTs (generate only produces DDL)
 6. Review → `npm run migration:run` → psql check from the step doc
 7. `npm run migration:revert && npm run migration:run` once to prove
    the seeds round-trip (the ProofOfRunner drill)
@@ -75,6 +76,20 @@ mid-flight.
 
 ## Environment facts (all discovered the hard way — trust them)
 
+- Plain `npx tsc` and `nest build` must share the emit layout: BOTH
+  tsconfig.json and tsconfig.build.json carry `rootDir: ./src` and
+  `include: ["src"]`. Without it, `tsc` writes `dist/src/...` while
+  `nest build` writes `dist/...` — `migration:generate`'s
+  `dist/**/*.entity.js` glob then reads a STALE file and diffs against
+  the wrong schema (this cost an afternoon). Also: `incremental` cache
+  (`*.tsbuildinfo`) can lie — if dist looks stale, delete the
+  tsbuildinfo or `rm -rf dist` and rebuild before generate.
+- vitest IS the scaffold's test runner (Nest 12 ships vitest configs;
+  every `nest g service` generates a `*.service.spec.ts`). Ahmed runs
+  NO tests for now — generated spec files are simply removed; if tests
+  return, stub any injected repo with
+  `{ provide: getRepositoryToken(SomeEntity), useValue: {} }`.
+
 - `ts-node` is a PEER dependency of `typeorm-ts-node-commonjs`
   (installed already, dev-dep).
 - typeorm CLI 1.1.2: `migration:create` takes a bare PATH (no
@@ -83,9 +98,9 @@ mid-flight.
 - Postgres 18 images need the volume mounted at `/var/lib/postgresql`
   (NOT `.../data`) — all services follow this.
 - Node's type-stripping (`node .ts`) chokes on TS *decorators* —
-  entity files can't be executed raw. This is why the CLI-side
-  `data-source.ts` has `entities: []` for `run`/`revert`; entity-first
-  generate needs compiled `dist/` entities (work pending).
+  entity files can't be executed raw. That is why the CLI
+  `data-source.ts` points its entities glob at COMPILED
+  `dist/**/*.entity.js` (decorators already transformed at emit).
 - Windows bind mounts: the container's `nest start --watch` often goes
   deaf to host file changes. `docker compose restart payment` after
   edits; sometimes `docker compose run --rm payment npm install` after
