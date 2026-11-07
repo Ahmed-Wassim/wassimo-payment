@@ -5,8 +5,10 @@ import { APP_CONFIG, AppConfigModule } from './config/config.module.ts';
 import type { AppConfig } from './config/configuration.ts';
 import { OrganizationsModule } from './organizations/organizations.module.ts';
 import { CurrenciesModule } from './currencies/currencies.module.ts';
-import { ApplicationsModule } from './applications/applications.module.js';
-import { CredentialsModule } from './credentials/credentials.module.js';
+import { ApplicationsModule } from './applications/applications.module.ts';
+import { CredentialsModule } from './credentials/credentials.module.ts';
+import { AuthModule } from './auth/auth.module.ts';
+import { AuthDebugController } from './auth/auth-debug.controller.ts';
 
 @Module({
   imports: [
@@ -26,7 +28,8 @@ import { CredentialsModule } from './credentials/credentials.module.js';
     CurrenciesModule,
     ApplicationsModule,
     CredentialsModule,
+    AuthModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, AuthDebugController],
 })
 export class AppModule {}
