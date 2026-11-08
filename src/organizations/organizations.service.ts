@@ -1,14 +1,68 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization } from './organization.entity.ts';
+import { Application } from '../applications/application.entity.ts';
 
 @Injectable()
 export class OrganizationsService {
   constructor(
     @InjectRepository(Organization)
     private readonly repo: Repository<Organization>,
+    @InjectRepository(Application)
+    private readonly applications: Repository<Application>,
   ) {}
+
+  async findAll() {
+    return await this.repo.find({ order: { createdAt: 'ASC' } });
+  }
+
+  async create(dto: { slug: string; name: string; status?: string }) {
+    const exists = await this.repo.findOne({ where: { slug: dto.slug } });
+    if (exists) {
+      throw new ConflictException(`Organization already exists: ${dto.slug}`);
+    }
+
+    const org = this.repo.create({
+      slug: dto.slug,
+      name: dto.name,
+      status: dto.status ?? 'active',
+      isPlatform: false,
+    });
+
+    return this.repo.save(org);
+  }
+
+  async findById(id: string): Promise<Organization | null> {
+    return this.repo.findOne({ where: { id } });
+  }
+
+  async remove(id: string) {
+    const org = await this.requireById(id);
+    if (org.isPlatform) {
+      throw new ConflictException('platform organization cannot be deleted');
+    }
+    const applications = await this.applications.count({
+      where: { organization: { id: org.id } },
+    });
+    if (applications > 0) {
+      throw new ConflictException(
+        `organization ${org.slug} has ${applications} application(s); delete them first`,
+      );
+    }
+    return this.repo.remove(org);
+  }
+
+  async requireById(id: string): Promise<Organization> {
+    const org = await this.findById(id);
+    if (!org) throw new NotFoundException(`Organization not found ${id}`);
+
+    return org;
+  }
 
   async resolvePlatformOrg(): Promise<Organization> {
     return this.repo.findOneOrFail({ where: { isPlatform: true } });
@@ -16,6 +70,15 @@ export class OrganizationsService {
 
   async findBySlug(slug: string): Promise<Organization | null> {
     return this.repo.findOne({ where: { slug } });
+  }
+
+  async update(id: string, dto: { name?: string; status?: string }) {
+    const org = await this.requireById(id);
+
+    if (dto.name !== undefined) org.name = dto.name;
+    if (dto.status !== undefined) org.status = dto.status;
+
+    return this.repo.save(org);
   }
 
   async requireBySlug(slug: string): Promise<Organization> {
