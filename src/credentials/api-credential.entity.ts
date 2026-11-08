@@ -7,6 +7,10 @@ import {
 } from 'typeorm';
 import { Application } from '../applications/application.entity.ts';
 
+export type CredentialEnvironment = 'test' | 'live';
+
+export type CredentialStatus = 'active' | 'revoked';
+
 @Entity('api_credentials')
 export class ApiCredential {
   @PrimaryGeneratedColumn('uuid')
@@ -40,13 +44,13 @@ export class ApiCredential {
     length: 255,
     nullable: false,
   })
-  environment!: string;
+  environment!: CredentialEnvironment;
 
   @Column({ type: 'jsonb', default: () => "'[]'::jsonb", nullable: false })
   scopes!: string[];
 
   @Column({ type: 'varchar', length: 255, default: 'active', nullable: false })
-  status!: string;
+  status!: CredentialStatus;
 
   @Column({ name: 'last_used_at', type: 'timestamptz', nullable: true })
   lastUsedAt!: Date | null;

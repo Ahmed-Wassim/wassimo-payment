@@ -1,8 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ApiCredential } from './api-credential.entity.ts';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
+import { CredentialModel, toCredentialModel } from './credential.model.ts';
+import { Application } from '../applications/application.entity.ts';
+import { CredentialEnvironment } from './api-credential.entity.ts';
+import { IssueCredentialDto } from './dto/issue-credential.dto.ts';
 
 export interface VerifiedCredential {
   credential: ApiCredential;
@@ -17,7 +21,11 @@ export class CredentialsService {
     private readonly repo: Repository<ApiCredential>,
   ) {}
 
-  async issue(applicationId: string, environment: string, scopes: string[]) {
+  async issue(
+    applicationId: string,
+    environment: CredentialEnvironment,
+    scopes: string[],
+  ) {
     const keyId = randomBytes(4).toString('hex');
     const secret = randomBytes(32).toString('base64url');
     const token = `wpk_${keyId}_${secret}`;
@@ -64,5 +72,53 @@ export class CredentialsService {
 
   async touchLastUsed(id: string): Promise<void> {
     await this.repo.update(id, { lastUsedAt: new Date() });
+  }
+
+  async issueForApp(dto: IssueCredentialDto) {
+    const app = await this.repo.manager.findOne(Application, {
+      where: { id: dto.applicationId },
+    });
+    if (!app) {
+      throw new NotFoundException(`Application not found ${dto.applicationId}`);
+    }
+
+    const token = await this.issue(dto.applicationId, 'test', dto.scopes);
+    return { applicationId: dto.applicationId, environment: 'test', scopes: dto.scopes, token };
+  }
+
+  async revoke(id: string): Promise<CredentialModel> {
+    const row = await this.repo.findOne({
+      where: { id },
+      relations: { application: true },
+    });
+    if (!row) throw new NotFoundException(`Credential not found ${id}`);
+
+    if (row.status !== 'revoked') {
+      row.status = 'revoked';
+      row.revokedAt = new Date();
+      await this.repo.update(id, {
+        status: row.status,
+        revokedAt: row.revokedAt,
+      });
+    }
+
+    return toCredentialModel(row);
+  }
+
+  async findAll(): Promise<CredentialModel[]> {
+    const rows = await this.repo.find({
+      relations: { application: true },
+      order: { createdAt: 'ASC' },
+    });
+    return rows.map((row) => toCredentialModel(row));
+  }
+
+  async findOne(id: string): Promise<CredentialModel> {
+    const row = await this.repo.findOne({
+      where: { id },
+      relations: { application: true },
+    });
+    if (!row) throw new NotFoundException(`Credential not found ${id}`);
+    return toCredentialModel(row);
   }
 }
