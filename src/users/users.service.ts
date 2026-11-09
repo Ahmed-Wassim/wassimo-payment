@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity.ts';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { OrgMembership } from './entities/org-membership.entity.ts';
 import { Role } from './entities/role.entity.ts';
 import { Permission } from './entities/permission.entity.ts';
@@ -96,5 +96,23 @@ export class UsersService {
 
   async assignPermissionToRole(roleId: string, permissionCode: string): Promise<void> {
     await this.rolePermissions.save(this.rolePermissions.create({ roleId, permissionCode }));
+  }
+
+  async setRolePermissions(roleId: string, permissionCodes: string[], organizationId: string): Promise<void> {
+    const role = await this.findRoleById(roleId);
+    if (role.organizationId !== organizationId) {
+      throw new ForbiddenException('Cannot modify roles in another organization');
+    }
+    await this.rolePermissions.delete({ roleId });
+    for (const code of permissionCodes) {
+      await this.rolePermissions.save(this.rolePermissions.create({ roleId, permissionCode: code }));
+    }
+  }
+
+  async listByOrg(organizationId: string): Promise<User[]> {
+    const memberships = await this.memberships.find({ where: { organizationId } });
+    const userIds = memberships.map((m) => m.userId);
+    if (userIds.length === 0) return [];
+    return this.users.findBy({ id: In(userIds) });
   }
 }
