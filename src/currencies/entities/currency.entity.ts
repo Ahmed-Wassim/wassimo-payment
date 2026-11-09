@@ -19,6 +19,9 @@ export class Currency {
   @Column({ type: 'text' })
   symbol!: string;
 
+  @Column({ name: 'symbol_url', type: 'text', nullable: true })
+  symbolUrl!: string | null;
+
   @Column({ default: true })
   enabled!: boolean;
 

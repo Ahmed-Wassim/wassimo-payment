@@ -7,6 +7,10 @@ export class UpdateCurrencyDto {
   symbol?: string;
 
   @IsOptional()
+  @IsString()
+  symbolUrl?: string;
+
+  @IsOptional()
   @IsBoolean()
   enabled?: boolean;
 }

@@ -28,6 +28,10 @@ export class CreateCurrencyDto {
   symbol!: string;
 
   @IsOptional()
+  @IsString()
+  symbolUrl?: string;
+
+  @IsOptional()
   @IsBoolean()
   enabled?: boolean;
 }

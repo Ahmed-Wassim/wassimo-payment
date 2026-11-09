@@ -37,6 +37,7 @@ export class CurrenciesService {
     code: string;
     exponent: number;
     symbol: string;
+    symbolUrl?: string;
     enabled?: boolean;
   }) {
     const exists = await this.repo.findOne({ where: { code: dto.code } });
@@ -49,12 +50,13 @@ export class CurrenciesService {
       code: dto.code.toUpperCase().trim(),
       exponent: dto.exponent,
       symbol: dto.symbol,
+      symbolUrl: dto.symbolUrl ?? null,
       enabled: dto.enabled ?? true,
     });
     return this.repo.save(currency);
   }
 
-  async update(code: string, dto: { symbol?: string; enabled?: boolean }) {
+  async update(code: string, dto: { symbol?: string; symbolUrl?: string; enabled?: boolean }) {
     const normalized = code.toUpperCase().trim();
     const currency = await this.repo.findOne({ where: { code: normalized } });
 
@@ -63,6 +65,7 @@ export class CurrenciesService {
     }
 
     if (dto.symbol !== undefined) currency.symbol = dto.symbol;
+    if (dto.symbolUrl !== undefined) currency.symbolUrl = dto.symbolUrl;
     if (dto.enabled !== undefined) currency.enabled = dto.enabled;
 
     return this.repo.save(currency);
