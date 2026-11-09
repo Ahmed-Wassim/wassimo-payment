@@ -21,12 +21,18 @@ export class ApplicationsService {
     private readonly credentials: Repository<ApiCredential>,
   ) {}
 
-  findAll() {
-    return this.repo.find({ order: { createdAt: 'ASC' } });
+  async findAll() {
+    return this.repo.find({
+      relations: { organization: true },
+      order: { createdAt: 'ASC' },
+    });
   }
 
   async requireById(id: string): Promise<Application> {
-    const app = await this.repo.findOne({ where: { id } });
+    const app = await this.repo.findOne({
+      where: { id },
+      relations: { organization: true },
+    });
     if (!app) throw new NotFoundException(`Application not found ${id}`);
     return app;
   }
