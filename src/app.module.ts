@@ -9,6 +9,7 @@ import { ApplicationsModule } from './applications/applications.module.ts';
 import { CredentialsModule } from './credentials/credentials.module.ts';
 import { AuthModule } from './auth/auth.module.ts';
 import { AuthDebugController } from './auth/auth-debug.controller.ts';
+import { ProvidersModule } from './providers/providers.module.ts';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AuthDebugController } from './auth/auth-debug.controller.ts';
     ApplicationsModule,
     CredentialsModule,
     AuthModule,
+    ProvidersModule,
   ],
   controllers: [HealthController, AuthDebugController],
 })
