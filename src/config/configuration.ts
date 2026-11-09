@@ -4,6 +4,7 @@ export interface AppConfig {
   broker: { url: string };
   outbox: { pollSeconds: number };
   expiry: { sweepSeconds: number };
+  jwt: { secret: string };
 }
 
 function fail(message: string): never {
@@ -46,5 +47,6 @@ export function loadConfig(): AppConfig {
     },
     outbox: { pollSeconds: intOption('OUTBOX_POLL_SECONDS', 5, 1) },
     expiry: { sweepSeconds: intOption('EXPIRY_SWEEP_SECONDS', 60, 1) },
+  jwt: { secret: process.env.JWT_SECRET ?? 'dev-jwt-secret-change-in-prod' },
   };
 }

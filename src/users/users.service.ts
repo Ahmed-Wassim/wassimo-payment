@@ -22,8 +22,13 @@ export class UsersService {
     private readonly rolePermissions: Repository<RolePermission>,
   ) {}
 
-  async findByEmail(email: string): Promise<User | null> {
-    return this.users.findOne({ where: { email } });
+  async findByEmail(email: string, selectPassword = false): Promise<User | null> {
+    return this.users.findOne({
+      where: { email },
+      select: selectPassword
+        ? { id: true, email: true, passwordHash: true, status: true, isSuperAdmin: true, createdAt: true, updatedAt: true }
+        : undefined,
+    });
   }
 
   async findById(id: string): Promise<User> {
@@ -68,5 +73,28 @@ export class UsersService {
   async hasPermission(roleId: string, permission: string): Promise<boolean> {
     const perms = await this.getRolePermissions(roleId);
     return perms.includes(permission);
+  }
+
+  async create(data: { email: string; passwordHash: string }): Promise<User> {
+    const user = this.users.create(data);
+    return this.users.save(user);
+  }
+
+  async createRole(organizationId: string, name: string, createdBy: string): Promise<Role> {
+    const role = this.roles.create({ organizationId, name, createdBy });
+    return this.roles.save(role);
+  }
+
+  async createMembership(userId: string, organizationId: string, roleId: string): Promise<OrgMembership> {
+    const membership = this.memberships.create({ userId, organizationId, roleId });
+    return this.memberships.save(membership);
+  }
+
+  async listPermissionsByGroup(group: string): Promise<Permission[]> {
+    return this.permissions.find({ where: { groupName: group } });
+  }
+
+  async assignPermissionToRole(roleId: string, permissionCode: string): Promise<void> {
+    await this.rolePermissions.save(this.rolePermissions.create({ roleId, permissionCode }));
   }
 }
