@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ProviderAccount } from './provider-account.entity.ts';
-import { Provider } from './provider.entity.ts';
+import { ProviderAccount } from './entities/provider-account.entity.ts';
+import { Provider } from './entities/provider.entity.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
 import { UpdateProviderAccountDto } from './dto/update-provider-account.dto.ts';
-import { Organization } from '../organizations/organization.entity.ts';
+import { Organization } from '../organizations/entities/organization.entity.ts';
 import {
   ProviderAccountModel,
   toProviderAccountModel,

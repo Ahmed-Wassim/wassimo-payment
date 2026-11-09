@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Currency } from './currency.entity.ts';
+import { Currency } from './entities/currency.entity.ts';
 import { CurrenciesService } from './currencies.service.ts';
 import { CurrenciesController } from './currencies.controller.ts';
 

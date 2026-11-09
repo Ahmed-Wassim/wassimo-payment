@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProvidersService } from './providers.service.ts';
-import { ProviderAccount } from './provider-account.entity.ts';
-import { Provider } from './provider.entity.ts';
+import { ProviderAccount } from './entities/provider-account.entity.ts';
+import { Provider } from './entities/provider.entity.ts';
 import { ProvidersController } from './providers.controller.ts';
 
 @Module({

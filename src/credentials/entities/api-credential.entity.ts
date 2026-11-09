@@ -5,7 +5,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Application } from '../applications/application.entity.ts';
+import { Application } from '../../applications/entities/application.entity.ts';
 
 export type CredentialEnvironment = 'test' | 'live';
 

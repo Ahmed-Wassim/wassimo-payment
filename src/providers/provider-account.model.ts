@@ -1,4 +1,4 @@
-import { ProviderAccount } from "./provider-account.entity.ts";
+import { ProviderAccount } from "./entities/provider-account.entity.ts";
 
 export class ProviderAccountModel {
   id!: string;

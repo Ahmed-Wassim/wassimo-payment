@@ -8,7 +8,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { Provider } from './provider.entity.ts';
+import { Provider } from './entities/provider.entity.ts';
 import { ProvidersService } from './providers.service.ts';
 import { ProviderAccountModel } from './provider-account.model.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';

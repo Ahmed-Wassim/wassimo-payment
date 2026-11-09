@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CredentialsService } from './credentials.service.ts';
-import { ApiCredential } from './api-credential.entity.ts';
+import { ApiCredential } from './entities/api-credential.entity.ts';
 import { CredentialsController } from './credentials.controller.ts';
 import { TypeOrmModule } from '@nestjs/typeorm';
 

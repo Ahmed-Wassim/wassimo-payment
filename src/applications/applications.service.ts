@@ -4,11 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Application } from './application.entity.ts';
+import { Application } from './entities/application.entity.ts';
 import { Repository } from 'typeorm';
-import { Organization } from '../organizations/organization.entity.ts';
+import { Organization } from '../organizations/entities/organization.entity.ts';
 import { UpdateApplicationDto } from './dto/update-application.dto.ts';
-import { ApiCredential } from '../credentials/api-credential.entity.ts';
+import { ApiCredential } from '../credentials/entities/api-credential.entity.ts';
 
 @Injectable()
 export class ApplicationsService {

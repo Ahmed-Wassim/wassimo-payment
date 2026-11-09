@@ -7,7 +7,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Organization } from '../organizations/organization.entity.ts';
+import { Organization } from '../../organizations/entities/organization.entity.ts';
 
 @Entity('applications')
 export class Application {

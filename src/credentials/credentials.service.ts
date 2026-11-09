@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ApiCredential } from './api-credential.entity.ts';
+import { ApiCredential } from './entities/api-credential.entity.ts';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { CredentialModel, toCredentialModel } from './credential.model.ts';
-import { Application } from '../applications/application.entity.ts';
-import { CredentialEnvironment } from './api-credential.entity.ts';
+import { Application } from '../applications/entities/application.entity.ts';
+import { CredentialEnvironment } from './entities/api-credential.entity.ts';
 import { IssueCredentialDto } from './dto/issue-credential.dto.ts';
 
 export interface VerifiedCredential {
