@@ -8,8 +8,8 @@ import { CurrenciesModule } from './currencies/currencies.module.ts';
 import { ApplicationsModule } from './applications/applications.module.ts';
 import { CredentialsModule } from './credentials/credentials.module.ts';
 import { AuthModule } from './auth/auth.module.ts';
-import { AuthDebugController } from './auth/auth-debug.controller.ts';
 import { ProvidersModule } from './providers/providers.module.ts';
+import { OptionsModule } from './options/options.module.ts';
 
 @Module({
   imports: [
@@ -31,7 +31,8 @@ import { ProvidersModule } from './providers/providers.module.ts';
     CredentialsModule,
     AuthModule,
     ProvidersModule,
+    OptionsModule,
   ],
-  controllers: [HealthController, AuthDebugController],
+  controllers: [HealthController],
 })
 export class AppModule {}

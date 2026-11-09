@@ -32,7 +32,7 @@ export class ProvidersService {
     const qb = this.accounts
       .createQueryBuilder('a')
       .where('a.organization_id = :orgId', { orgId: organizationId })
-      .andWhere('a.status = :enabled', { status: 'enabled' });
+      .andWhere('a.status = :status', { status: 'enabled' });
     if (filter?.currency) {
       qb.andWhere('a.supported_currencies @> :currencies::jsonb', {
         currencies: JSON.stringify([filter.currency]),
