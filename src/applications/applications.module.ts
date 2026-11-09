@@ -1,5 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ApplicationsService } from './applications.service.ts';
+import { AuthModule } from '../auth/auth.module.ts';
+import { UsersModule } from '../users/users.module.ts';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Application } from './entities/application.entity.ts';
 import { ApplicationsController } from './applications.controller.ts';
@@ -11,6 +13,8 @@ import { ApiCredential } from '../credentials/entities/api-credential.entity.ts'
     TypeOrmModule.forFeature([
       Application, Organization, ApiCredential,
     ]),
+    forwardRef(() => AuthModule),
+    forwardRef(() => UsersModule),
   ],
   providers: [ApplicationsService],
   exports: [ApplicationsService],

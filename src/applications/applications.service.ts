@@ -28,6 +28,14 @@ export class ApplicationsService {
     });
   }
 
+  async listByOrg(organizationId: string) {
+    return this.repo.find({
+      where: { organization: { id: organizationId } },
+      relations: { organization: true },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
   async requireById(id: string): Promise<Application> {
     const app = await this.repo.findOne({
       where: { id },
@@ -35,6 +43,10 @@ export class ApplicationsService {
     });
     if (!app) throw new NotFoundException(`Application not found ${id}`);
     return app;
+  }
+
+  async createForOrg(organizationId: string, dto: { slug: string; name: string }) {
+    return this.create({ slug: dto.slug, name: dto.name, organizationId });
   }
 
   async create(dto: { slug: string; name: string; organizationId: string }) {
