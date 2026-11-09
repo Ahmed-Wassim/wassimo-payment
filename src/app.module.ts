@@ -9,6 +9,7 @@ import { ApplicationsModule } from './applications/applications.module.ts';
 import { CredentialsModule } from './credentials/credentials.module.ts';
 import { AuthModule } from './auth/auth.module.ts';
 import { ProvidersModule } from './providers/providers.module.ts';
+import { UsersModule } from './users/users.module.ts';
 import { OptionsModule } from './options/options.module.ts';
 
 @Module({
@@ -31,6 +32,7 @@ import { OptionsModule } from './options/options.module.ts';
     CredentialsModule,
     AuthModule,
     ProvidersModule,
+    UsersModule,
     OptionsModule,
   ],
   controllers: [HealthController],
