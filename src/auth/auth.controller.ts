@@ -48,18 +48,21 @@ export class AuthController {
     if (!ok) throw new UnauthorizedException('Invalid credentials');
     if (user.status !== 'active') throw new UnauthorizedException('Account disabled');
     const membership = await this.users.requireMembership(user.id);
+    const permissions = await this.users.getRolePermissions(membership.roleId);
     const token = this.jwt.sign({
       sub: user.id,
       orgId: membership.organizationId,
       roleId: membership.roleId,
       isSuperAdmin: user.isSuperAdmin,
     });
-    return { accessToken: token };
+    return { accessToken: token, permissions };
   }
 
   @Get('auth/me')
   @UseGuards(JwtGuard)
-  me(@Req() req: { actor: ActorContext }) {
-    return req.actor;
+  async me(@Req() req: { actor: ActorContext }) {
+    const membership = await this.users.requireMembership(req.actor.userId);
+    const permissions = await this.users.getRolePermissions(membership.roleId);
+    return { ...req.actor, permissions };
   }
 }
