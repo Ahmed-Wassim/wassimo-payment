@@ -10,6 +10,7 @@ import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { ChargeService } from './charge.service.ts';
 import { PaymentsService } from './payments.service.ts';
 import { PaymentsController } from './payments.controller.ts';
+import { ResolutionService } from './resolution.service.ts';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { PaymentsController } from './payments.controller.ts';
     IdempotencyModule,
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService, ChargeService],
+  providers: [PaymentsService, ChargeService, ResolutionService],
   exports: [PaymentsService],
 })
 export class PaymentsModule {}

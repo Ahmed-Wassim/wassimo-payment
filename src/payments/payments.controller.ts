@@ -14,6 +14,7 @@ import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../common/api-error.ts';
 import { IdempotencyService } from '../idempotency/idempotency.service.ts';
 import { ChargeService } from './charge.service.ts';
+import { ResolutionService } from './resolution.service.ts';
 import { PaymentsService } from './payments.service.ts';
 import { toPaymentModel } from './payment.model.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
@@ -26,6 +27,7 @@ export class PaymentsController {
     private readonly payments: PaymentsService,
     private readonly idempotency: IdempotencyService,
     private readonly charge: ChargeService,
+    private readonly resolution: ResolutionService,
   ) {}
 
   @Post('v1/payments')
@@ -82,5 +84,14 @@ export class PaymentsController {
     @Param('id') id: string,
   ) {
     return this.charge.charge(req.auth!, id);
+  }
+
+  @Post('v1/payments/:id/resolve')
+  async resolvePayment(
+    @Req() req: { auth?: AuthContext },
+    @Param('id') id: string,
+  ) {
+    const payment = await this.resolution.resolve(req.auth!, id);
+    return toPaymentModel(payment);
   }
 }
