@@ -17,7 +17,6 @@ export class ResolutionService {
   constructor(
     @InjectRepository(PaymentAttempt)
     private readonly attempts: Repository<PaymentAttempt>,
-    @InjectRepository(Payment)
     private readonly payments: PaymentsService,
     private readonly providers: ProvidersService,
     private readonly factory: PaymentProviderFactory,
