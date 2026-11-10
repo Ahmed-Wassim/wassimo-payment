@@ -21,8 +21,6 @@ export class ChargeService {
   constructor(
     @InjectRepository(PaymentAttempt)
     private readonly attempts: Repository<PaymentAttempt>,
-    @InjectRepository(Payment)
-    private readonly paymentsRepo: Repository<Payment>,
     private readonly payments: PaymentsService,
     private readonly providers: ProvidersService,
     private readonly factory: PaymentProviderFactory,
@@ -99,26 +97,16 @@ export class ChargeService {
 
     const adapter = this.factory.forAccount(account);
 
-    let attempt: PaymentAttempt;
-    try {
-      attempt = await this.attempts.manager.transaction(async (tx) =>
-        tx.save(PaymentAttempt, {
-          paymentId: payment.id,
-          organizationId: payment.organizationId,
-          providerAccountId: payment.providerAccountId!,
-          operation: 'charge',
-          status: 'initiated',
-          diagnostics: {},
-        }),
-      );
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      throw new ApiError(
-        'payment_not_chargeable',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        message,
-      );
-    }
+    const attempt = await this.attempts.manager.transaction(async (tx) =>
+      tx.save(PaymentAttempt, {
+        paymentId: payment.id,
+        organizationId: payment.organizationId,
+        providerAccountId: payment.providerAccountId!,
+        operation: 'charge',
+        status: 'initiated',
+        diagnostics: {},
+      }),
+    );
 
     let providerReference: string | null = null;
     let redirectUrl: string | null = null;
