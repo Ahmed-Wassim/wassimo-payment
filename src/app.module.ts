@@ -14,6 +14,7 @@ import { OptionsModule } from './options/options.module.ts';
 import { PermissionsModule } from './permissions/permissions.module.ts';
 import { CommonModule } from './common/common.module.ts';
 import { PaymentsModule } from './payments/payments.module.ts';
+import { IdempotencyModule } from './idempotency/idempotency.module.ts';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { PaymentsModule } from './payments/payments.module.ts';
     PermissionsModule,
     CommonModule,
     PaymentsModule,
+    IdempotencyModule,
   ],
   controllers: [HealthController],
 })

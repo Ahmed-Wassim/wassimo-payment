@@ -17,11 +17,8 @@ export class PaymentsService {
     private readonly providers: ProvidersService,
   ) {}
 
-  async create(auth: AuthContext, dto: CreatePaymentDto): Promise<PaymentPublicModel> {
-    const payment = await this.repo.manager.transaction((em) =>
-      this.createInTx(em, auth, dto),
-    );
-    return toPaymentModel(payment);
+  async create(auth: AuthContext, dto: CreatePaymentDto): Promise<Payment> {
+    return this.repo.manager.transaction((em) => this.createInTx(em, auth, dto));
   }
 
   async createInTx(
