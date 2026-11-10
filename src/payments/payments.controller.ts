@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Get,
   Headers,
   HttpStatus,
+  Param,
   Post,
   Req,
   UseGuards,
@@ -14,6 +16,7 @@ import { IdempotencyService } from '../idempotency/idempotency.service.ts';
 import { PaymentsService } from './payments.service.ts';
 import { toPaymentModel } from './payment.model.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
+import { isUuid } from './uuid.ts';
 
 @Controller()
 @UseGuards(ApiKeyGuard)
@@ -50,6 +53,24 @@ export class PaymentsController {
     if (!payment) {
       throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'payment not found');
     }
+    return toPaymentModel(payment);
+  }
+
+  @Get('v1/payments/:id')
+  async get(@Req() req: { auth?: AuthContext }, @Param('id') id: string) {
+    if (!isUuid(id)) {
+      throw new ApiError(
+        'validation_error',
+        HttpStatus.BAD_REQUEST,
+        'malformed payment id',
+      );
+    }
+
+    const payment = await this.payments.loadById(id);
+    if (!payment || payment.organizationId !== req.auth!.organizationId) {
+      throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'payment not found');
+    }
+
     return toPaymentModel(payment);
   }
 }
