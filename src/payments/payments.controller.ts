@@ -13,6 +13,7 @@ import { ApiKeyGuard } from '../auth/api-key.guard.ts';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../common/api-error.ts';
 import { IdempotencyService } from '../idempotency/idempotency.service.ts';
+import { ChargeService } from './charge.service.ts';
 import { PaymentsService } from './payments.service.ts';
 import { toPaymentModel } from './payment.model.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
@@ -24,6 +25,7 @@ export class PaymentsController {
   constructor(
     private readonly payments: PaymentsService,
     private readonly idempotency: IdempotencyService,
+    private readonly charge: ChargeService,
   ) {}
 
   @Post('v1/payments')
@@ -72,5 +74,13 @@ export class PaymentsController {
     }
 
     return toPaymentModel(payment);
+  }
+
+  @Post('v1/payments/:id/charge')
+  async chargePayment(
+    @Req() req: { auth?: AuthContext },
+    @Param('id') id: string,
+  ) {
+    return this.charge.charge(req.auth!, id);
   }
 }
