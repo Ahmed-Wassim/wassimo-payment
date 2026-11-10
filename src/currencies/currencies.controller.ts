@@ -7,10 +7,16 @@ import {
   Param,
   Patch,
   Post,
+  SetMetadata,
+  UseGuards,
 } from '@nestjs/common';
 import { CurrenciesService } from './currencies.service.ts';
 import { CreateCurrencyDto } from './dto/create-currency.dto.ts';
 import { UpdateCurrencyDto } from './dto/update-currency.dto.ts';
+import { JwtGuard } from '../auth/jwt.guard.ts';
+import { PermissionGuard } from '../auth/permission.guard.ts';
+
+const Permission = (action: string) => SetMetadata('permission', action);
 
 @Controller('currencies')
 export class CurrenciesController {
@@ -27,17 +33,23 @@ export class CurrenciesController {
   }
 
   @Post()
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('platform:orgs:read')
   create(@Body() dto: CreateCurrencyDto) {
     return this.service.create(dto);
   }
 
   @Patch(':code')
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('platform:orgs:read')
   update(@Param('code') code: string, @Body() dto: UpdateCurrencyDto) {
     return this.service.update(code, dto);
   }
 
   @Delete(':code')
   @HttpCode(204)
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('platform:orgs:read')
   async remove(@Param('code') code: string) {
     await this.service.remove(code);
   }
