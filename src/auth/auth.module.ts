@@ -12,7 +12,7 @@ import { PermissionGuard } from './permission.guard.ts';
   imports: [
     AppConfigModule,
     forwardRef(() => UsersModule),
-    OrganizationsModule,
+    forwardRef(() => OrganizationsModule),
     JwtModule.registerAsync({
       inject: [APP_CONFIG],
       useFactory: (cfg: AppConfig) => ({

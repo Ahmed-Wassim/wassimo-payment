@@ -88,4 +88,15 @@ export class OrganizationsService {
     }
     return org;
   }
+
+  async findAllForActor(actor: { isSuperAdmin: boolean }, scopedOrgId: string) {
+    if (actor.isSuperAdmin) {
+      return this.repo.find({ order: { createdAt: 'ASC' } });
+    }
+
+    return this.repo.find({
+      where: { id: scopedOrgId },
+      order: { createdAt: 'ASC' },
+    });
+  }
 }

@@ -7,37 +7,58 @@ import {
   Param,
   Patch,
   Post,
+  Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service.ts';
 import { CreateOrganizationDto } from './dto/create-organization.dto.ts';
 import { UpdateOrganizationDto } from './dto/update-organization.dto.ts';
+import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
+import { PermissionGuard } from '../auth/permission.guard.ts';
+import { Permission } from '../auth/permission.decorator.ts';
 
 @Controller('organizations')
 export class OrganizationsController {
   constructor(private readonly service: OrganizationsService) {}
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('org:read')
+  findAll(
+    @Req() req: { actor: ActorContext },
+    @Query('organizationId') filter: string,
+  ) {
+    const orgId =
+      req.actor.isSuperAdmin && filter ? filter : req.actor.organizationId;
+    return this.service.findAllForActor(req.actor, orgId);
   }
 
   @Get(':id')
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('org:read')
   findOne(@Param('id') id: string) {
     return this.service.requireById(id);
   }
 
   @Post()
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('platform:orgs:read')
   create(@Body() dto: CreateOrganizationDto) {
     return this.service.create(dto);
   }
 
   @Patch(':id')
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('org:update')
   update(@Param('id') id: string, @Body() dto: UpdateOrganizationDto) {
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
   @HttpCode(204)
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('org:update')
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
