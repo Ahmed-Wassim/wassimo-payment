@@ -74,16 +74,39 @@ export class CredentialsService {
     await this.repo.update(id, { lastUsedAt: new Date() });
   }
 
-  async issueForApp(dto: IssueCredentialDto) {
+  async issueForActor(
+    actor: { organizationId: string; isSuperAdmin: boolean },
+    dto: IssueCredentialDto,
+  ) {
     const app = await this.repo.manager.findOne(Application, {
       where: { id: dto.applicationId },
+      relations: { organization: true },
     });
     if (!app) {
+      throw new NotFoundException(`Application not found ${dto.applicationId}`);
+    }
+    if (!actor.isSuperAdmin && app.organization.id !== actor.organizationId) {
       throw new NotFoundException(`Application not found ${dto.applicationId}`);
     }
 
     const token = await this.issue(dto.applicationId, 'test', dto.scopes);
     return { applicationId: dto.applicationId, environment: 'test', scopes: dto.scopes, token };
+  }
+
+  async findAllForActor(
+    actor: { isSuperAdmin: boolean },
+    scopedOrgId: string,
+  ): Promise<CredentialModel[]> {
+    const rows = await this.repo.find({
+      relations: { application: { organization: true } },
+      order: { createdAt: 'ASC' },
+    });
+
+    const filtered = actor.isSuperAdmin
+      ? rows
+      : rows.filter((r) => r.application?.organization?.id === scopedOrgId);
+
+    return filtered.map((row) => toCredentialModel(row));
   }
 
   async revoke(id: string): Promise<CredentialModel> {

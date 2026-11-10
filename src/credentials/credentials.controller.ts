@@ -1,28 +1,59 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { CredentialsService } from './credentials.service.ts';
 import { IssueCredentialDto } from './dto/issue-credential.dto.ts';
+import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
+import { PermissionGuard } from '../auth/permission.guard.ts';
+import { Permission } from '../auth/permission.decorator.ts';
 
 @Controller('credentials')
 export class CredentialsController {
   constructor(private readonly service: CredentialsService) {}
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('keys:read')
+  findAll(
+    @Req() req: { actor: ActorContext },
+    @Query('organizationId') filter?: string,
+  ) {
+    const orgId = req.actor.isSuperAdmin && filter
+      ? filter
+      : req.actor.organizationId;
+    return this.service.findAllForActor(req.actor, orgId);
   }
 
   @Get(':id')
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('keys:read')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
   }
 
-  @Patch(':id/revoke')
-  revoke(@Param('id') id: string) {
-    return this.service.revoke(id);
+  @Post()
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('keys:issue')
+  issue(
+    @Req() req: { actor: ActorContext },
+    @Body() dto: IssueCredentialDto,
+  ) {
+    return this.service.issueForActor(req.actor, dto);
   }
 
-  @Post()
-  issue(@Body() dto: IssueCredentialDto) {
-    return this.service.issueForApp(dto);
+  @Patch(':id/revoke')
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('keys:revoke')
+  revoke(@Param('id') id: string) {
+    return this.service.revoke(id);
   }
 }
