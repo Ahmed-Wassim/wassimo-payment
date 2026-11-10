@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module.ts';
 import { ProvidersModule } from './providers/providers.module.ts';
 import { UsersModule } from './users/users.module.ts';
 import { OptionsModule } from './options/options.module.ts';
+import { PermissionsModule } from './permissions/permissions.module.ts';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { OptionsModule } from './options/options.module.ts';
     ProvidersModule,
     UsersModule,
     OptionsModule,
+    PermissionsModule,
   ],
   controllers: [HealthController],
 })
