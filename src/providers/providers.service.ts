@@ -25,6 +25,19 @@ export class ProvidersService {
     return rows.map((row) => toProviderAccountModel(row));
   }
 
+  async listAccountsForActor(
+    actor: { isSuperAdmin: boolean },
+    scopedOrgId: string,
+  ): Promise<ProviderAccountModel[]> {
+    const rows = await this.accounts.find({ order: { createdAt: 'ASC' } });
+
+    const filtered = actor.isSuperAdmin
+      ? rows
+      : rows.filter((r) => r.organizationId === scopedOrgId);
+
+    return filtered.map((row) => toProviderAccountModel(row));
+  }
+
   async findEnabledForOrg(
     organizationId: string,
     filter?: { currency?: string; method?: string },
@@ -93,6 +106,14 @@ export class ProvidersService {
     });
     const saved = await this.accounts.save(row);
     return toProviderAccountModel(saved);
+  }
+
+  async createAccountForActor(
+    actor: { organizationId: string; isSuperAdmin: boolean },
+    dto: CreateProviderAccountDto,
+  ) {
+    const orgId = actor.isSuperAdmin ? dto.organizationId : actor.organizationId;
+    return this.createAccount({ ...dto, organizationId: orgId });
   }
 
   async updateAccount(id: string, dto: UpdateProviderAccountDto) {
