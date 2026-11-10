@@ -3,9 +3,10 @@ import { AppModule } from './app.module.js';
 import { APP_CONFIG } from './config/config.module.ts';
 import { AppConfig } from './config/configuration.ts';
 import { ValidationPipe } from '@nestjs/common';
+import { ApiErrorFilter } from './common/api-error.filter.ts';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableCors();
   app.useGlobalPipes(
     new ValidationPipe({
@@ -14,6 +15,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  app.useGlobalFilters(new ApiErrorFilter());
 
   const cfg = app.get<AppConfig>(APP_CONFIG);
   await app.listen(cfg.app.port);

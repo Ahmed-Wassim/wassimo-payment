@@ -12,6 +12,8 @@ import { ProvidersModule } from './providers/providers.module.ts';
 import { UsersModule } from './users/users.module.ts';
 import { OptionsModule } from './options/options.module.ts';
 import { PermissionsModule } from './permissions/permissions.module.ts';
+import { CommonModule } from './common/common.module.ts';
+import { PaymentsModule } from './payments/payments.module.ts';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { PermissionsModule } from './permissions/permissions.module.ts';
     UsersModule,
     OptionsModule,
     PermissionsModule,
+    CommonModule,
+    PaymentsModule,
   ],
   controllers: [HealthController],
 })
