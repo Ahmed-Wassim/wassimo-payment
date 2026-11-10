@@ -7,7 +7,6 @@ import {
   Param,
   Patch,
   Post,
-  SetMetadata,
   UseGuards,
 } from '@nestjs/common';
 import { CurrenciesService } from './currencies.service.ts';
@@ -15,8 +14,7 @@ import { CreateCurrencyDto } from './dto/create-currency.dto.ts';
 import { UpdateCurrencyDto } from './dto/update-currency.dto.ts';
 import { JwtGuard } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
-
-const Permission = (action: string) => SetMetadata('permission', action);
+import { Permission } from '../auth/permission.decorator.ts';
 
 @Controller('currencies')
 export class CurrenciesController {

@@ -16,9 +16,7 @@ import { CreateApplicationDto } from './dto/create-application.dto.ts';
 import { UpdateApplicationDto } from './dto/update-application.dto.ts';
 import { JwtGuard, ActorContext } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
-import { SetMetadata } from '@nestjs/common';
-
-const Permission = (action: string) => SetMetadata('permission', action);
+import { Permission } from '../auth/permission.decorator.ts';
 
 @Controller('applications')
 @UseGuards(JwtGuard, PermissionGuard)
