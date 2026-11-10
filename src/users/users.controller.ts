@@ -1,14 +1,12 @@
-import { Body, Controller, Get, Post, Req, UseGuards, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards, Param, Query } from '@nestjs/common';
 import { JwtGuard, ActorContext } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
-import { SetMetadata } from '@nestjs/common';
+import { Permission } from '../auth/permission.decorator.ts';
 import { UsersService } from './users.service.ts';
 import { CreateRoleDto } from './dto/create-role.dto.ts';
 import { AssignPermissionsDto } from './dto/assign-permissions.dto.ts';
 import { CreateMemberDto } from './dto/create-member.dto.ts';
 import * as bcrypt from 'bcrypt';
-
-const Permission = (action: string) => SetMetadata('permission', action);
 
 @Controller()
 @UseGuards(JwtGuard, PermissionGuard)
@@ -17,8 +15,14 @@ export class UsersController {
 
   @Get('roles')
   @Permission('org:members:manage')
-  listRoles(@Req() req: { actor: ActorContext }) {
-    return this.users.listRolesByOrg(req.actor.organizationId);
+  listRoles(
+    @Req() req: { actor: ActorContext },
+    @Query('organizationId') filter?: string,
+  ) {
+    const orgId = req.actor.isSuperAdmin && filter
+      ? filter
+      : req.actor.organizationId;
+    return this.users.listRolesByOrg(orgId);
   }
 
   @Post('roles')
@@ -40,8 +44,14 @@ export class UsersController {
 
   @Get('users')
   @Permission('org:members:read')
-  listMembers(@Req() req: { actor: ActorContext }) {
-    return this.users.listByOrg(req.actor.organizationId);
+  listMembers(
+    @Req() req: { actor: ActorContext },
+    @Query('organizationId') filter?: string,
+  ) {
+    const orgId = req.actor.isSuperAdmin && filter
+      ? filter
+      : req.actor.organizationId;
+    return this.users.listByOrg(orgId);
   }
 
   @Post('users')
