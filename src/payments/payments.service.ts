@@ -7,7 +7,6 @@ import { CurrenciesService } from '../currencies/currencies.service.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
 import { Payment } from './entities/payment.entity.ts';
-import { toPaymentModel, PaymentPublicModel } from './payment.model.ts';
 
 @Injectable()
 export class PaymentsService {
@@ -16,10 +15,6 @@ export class PaymentsService {
     private readonly currencies: CurrenciesService,
     private readonly providers: ProvidersService,
   ) {}
-
-  async create(auth: AuthContext, dto: CreatePaymentDto): Promise<Payment> {
-    return this.repo.manager.transaction((em) => this.createInTx(em, auth, dto));
-  }
 
   async createInTx(
     em: EntityManager,
