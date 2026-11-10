@@ -15,6 +15,7 @@ import { PermissionsModule } from './permissions/permissions.module.ts';
 import { CommonModule } from './common/common.module.ts';
 import { PaymentsModule } from './payments/payments.module.ts';
 import { IdempotencyModule } from './idempotency/idempotency.module.ts';
+import { WebhooksModule } from './webhooks/webhooks.module.ts';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { IdempotencyModule } from './idempotency/idempotency.module.ts';
     CommonModule,
     PaymentsModule,
     IdempotencyModule,
+    WebhooksModule,
   ],
   controllers: [HealthController],
 })
