@@ -29,16 +29,22 @@ export class PaymentsController {
     @Body() dto: CreatePaymentDto,
     @Headers('Idempotency-Key') idemKey?: string,
   ) {
-    const id = idemKey
-      ? (
-          await this.idempotency.execute(
-            req.auth!,
-            idemKey,
-            this.idempotency.fingerprint(dto),
-            (tx) => this.payments.createInTx(tx, req.auth!, dto),
-          )
-        ).id
-      : (await this.payments.create(req.auth!, dto)).id;
+    if (!idemKey?.trim()) {
+      throw new ApiError(
+        'validation_error',
+        HttpStatus.BAD_REQUEST,
+        'Idempotency-Key header is required',
+      );
+    }
+
+    const id = (
+      await this.idempotency.execute(
+        req.auth!,
+        idemKey,
+        this.idempotency.fingerprint(dto),
+        (tx) => this.payments.createInTx(tx, req.auth!, dto),
+      )
+    ).id;
 
     const payment = await this.payments.loadById(id);
     if (!payment) {
