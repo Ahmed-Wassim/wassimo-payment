@@ -18,6 +18,9 @@ export class ProviderAccount {
   @Column({ name: 'organization_id', type: 'uuid' })
   organizationId!: string;
 
+  @Column({ name: 'application_id', type: 'uuid' })
+  applicationId!: string;
+
   @Column({ name: 'provider_code', type: 'text' })
   providerCode!: string;
 
