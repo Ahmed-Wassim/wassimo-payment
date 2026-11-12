@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
   Matches,
@@ -9,8 +10,9 @@ import {
 } from 'class-validator';
 
 export class CreateApplicationDto {
+  @IsOptional()
   @IsUUID()
-  organizationId: string;
+  organizationId?: string;
 
   @Transform(({ value }) =>
     typeof value === 'string' ? value.trim().toLowerCase() : value,

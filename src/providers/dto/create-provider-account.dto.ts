@@ -15,6 +15,9 @@ export class CreateProviderAccountDto {
   @IsUUID()
   organizationId!: string;
 
+  @IsUUID()
+  applicationId!: string;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)

@@ -7,6 +7,7 @@ export interface AppConfig {
   outbox: { pollSeconds: number };
   expiry: { sweepSeconds: number };
   jwt: { secret: string };
+  encryption: { key: string | null };
 }
 
 export function loadConfig(): AppConfig {
@@ -18,5 +19,6 @@ export function loadConfig(): AppConfig {
     outbox: { pollSeconds: env.OUTBOX_POLL_SECONDS },
     expiry: { sweepSeconds: env.EXPIRY_SWEEP_SECONDS },
     jwt: { secret: env.JWT_SECRET },
+    encryption: { key: env.ENCRYPTION_KEY ?? null },
   };
 }

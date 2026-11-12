@@ -8,6 +8,7 @@ export interface EnvVars {
   OUTBOX_POLL_SECONDS: number;
   EXPIRY_SWEEP_SECONDS: number;
   JWT_SECRET: string;
+  ENCRYPTION_KEY?: string;
 }
 
 export const envValidationSchema = Joi.object<EnvVars, true>({
@@ -20,6 +21,7 @@ export const envValidationSchema = Joi.object<EnvVars, true>({
   OUTBOX_POLL_SECONDS: Joi.number().integer().min(1).default(5),
   EXPIRY_SWEEP_SECONDS: Joi.number().integer().min(1).default(60),
   JWT_SECRET: Joi.string().default('dev-jwt-secret-change-in-prod'),
+  ENCRYPTION_KEY: Joi.string().hex().length(64).optional(),
 }).unknown(true);
 
 export function validateEnv(env: NodeJS.ProcessEnv): EnvVars {

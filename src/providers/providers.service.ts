@@ -6,6 +6,7 @@ import { Provider } from './entities/provider.entity.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
 import { UpdateProviderAccountDto } from './dto/update-provider-account.dto.ts';
 import { Organization } from '../organizations/entities/organization.entity.ts';
+import { Application } from '../applications/entities/application.entity.ts';
 import {
   ProviderAccountModel,
   toProviderAccountModel,
@@ -86,6 +87,15 @@ export class ProvidersService {
     if (!org) {
       throw new NotFoundException(`Organization not found ${dto.organizationId}`);
     }
+    const application = await this.accounts.manager.findOne(Application, {
+      where: {
+        id: dto.applicationId,
+        organization: { id: dto.organizationId },
+      },
+    });
+    if (!application) {
+      throw new NotFoundException(`Application not found ${dto.applicationId}`);
+    }
     const provider = await this.providers.findOne({
       where: { code: dto.providerCode },
     });
@@ -95,6 +105,7 @@ export class ProvidersService {
 
     const row = this.accounts.create({
       organizationId: dto.organizationId,
+      applicationId: dto.applicationId,
       providerCode: dto.providerCode,
       environment: dto.environment,
       displayName: dto.displayName,

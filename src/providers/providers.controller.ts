@@ -13,16 +13,21 @@ import {
 } from '@nestjs/common';
 import { Provider } from './entities/provider.entity.ts';
 import { ProvidersService } from './providers.service.ts';
+import { ProviderCredentialService } from './provider-credential.service.ts';
 import { ProviderAccountModel } from './provider-account.model.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
 import { UpdateProviderAccountDto } from './dto/update-provider-account.dto.ts';
+import { SetProviderCredentialsDto } from './dto/set-provider-credentials.dto.ts';
 import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { Permission } from '../auth/permission.decorator.ts';
 
 @Controller()
 export class ProvidersController {
-  constructor(private readonly service: ProvidersService) {}
+  constructor(
+    private readonly service: ProvidersService,
+    private readonly credentials: ProviderCredentialService,
+  ) {}
 
   @Get('providers')
   @UseGuards(JwtGuard, PermissionGuard)
@@ -81,5 +86,17 @@ export class ProvidersController {
   @Permission('org:members:manage')
   async removeAccount(@Param('id') id: string) {
     await this.service.removeAccount(id);
+  }
+
+  @Post('provider-accounts/:id/credentials')
+  @HttpCode(204)
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('org:members:manage')
+  async setCredentials(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+    @Body() dto: SetProviderCredentialsDto,
+  ) {
+    await this.credentials.setForActor(req.actor, id, dto.credentials);
   }
 }
