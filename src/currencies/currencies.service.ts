@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Currency } from './entities/currency.entity.ts';
+import { toCurrencyModel } from './currency.model.ts';
 
 @Injectable()
 export class CurrenciesService {
@@ -26,11 +27,13 @@ export class CurrenciesService {
   }
 
   findAll() {
-    return this.repo.find({ order: { code: 'ASC' } });
+    return this.repo.find({ order: { code: 'ASC' } }).then((rows) =>
+      rows.map((row) => toCurrencyModel(row)),
+    );
   }
 
-  async findByCode(code: string): Promise<Currency> {
-    return this.requireEnabled(code);
+  async findByCode(code: string) {
+    return toCurrencyModel(await this.requireEnabled(code));
   }
 
   async create(dto: {
@@ -53,7 +56,8 @@ export class CurrenciesService {
       symbolUrl: dto.symbolUrl ?? null,
       enabled: dto.enabled ?? true,
     });
-    return this.repo.save(currency);
+    const saved = await this.repo.save(currency);
+    return toCurrencyModel(saved);
   }
 
   async update(code: string, dto: { symbol?: string; symbolUrl?: string; enabled?: boolean }) {
@@ -68,7 +72,8 @@ export class CurrenciesService {
     if (dto.symbolUrl !== undefined) currency.symbolUrl = dto.symbolUrl;
     if (dto.enabled !== undefined) currency.enabled = dto.enabled;
 
-    return this.repo.save(currency);
+    const saved = await this.repo.save(currency);
+    return toCurrencyModel(saved);
   }
 
   async remove(code: string) {
