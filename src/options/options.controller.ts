@@ -15,8 +15,11 @@ export class OptionsController {
     @Query('method') method?: string,
   ) {
     const auth = req.auth!;
-    const accounts = await this.providers.findEnabledForOrg(
-      auth.organizationId,
+    const accounts = await this.providers.findForContext(
+      {
+        organizationId: auth.organizationId,
+        applicationId: auth.applicationId,
+      },
       {
         currency: currency?.toUpperCase(),
         method: method?.toLowerCase(),
@@ -25,12 +28,12 @@ export class OptionsController {
     return {
       organization: auth.organizationId,
       generated_at: new Date().toISOString(),
-      options: accounts.map((a) => ({
-        provider_account_id: a.id,
-        gateway: a.providerCode,
-        display_name: a.displayName,
-        methods: a.supportedMethods,
-        currencies: a.supportedCurrencies,
+      options: accounts.map((account) => ({
+        provider_account_id: account.id,
+        gateway: account.providerCode,
+        display_name: account.displayName,
+        methods: account.supportedMethods,
+        currencies: account.supportedCurrencies,
       })),
     };
   }

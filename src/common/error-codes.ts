@@ -14,6 +14,7 @@ export const ERROR_CODES = [
   'refund_not_allowed',
   'encryption_key_missing',
   'provider_credentials_missing',
+  'provider_method_unsupported',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

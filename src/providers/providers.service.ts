@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ApiError } from '../common/api-error.ts';
 import { ProviderAccount } from './entities/provider-account.entity.ts';
-import { Provider } from './entities/provider.entity.ts';
+import { Provider, ProviderMethod } from './entities/provider.entity.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
 import { UpdateProviderAccountDto } from './dto/update-provider-account.dto.ts';
 import { Organization } from '../organizations/entities/organization.entity.ts';
@@ -39,13 +40,14 @@ export class ProvidersService {
     return filtered.map((row) => toProviderAccountModel(row));
   }
 
-  async findEnabledForOrg(
-    organizationId: string,
+  async findForContext(
+    context: { organizationId: string; applicationId: string },
     filter?: { currency?: string; method?: string },
   ): Promise<ProviderAccount[]> {
     const qb = this.accounts
       .createQueryBuilder('a')
-      .where('a.organization_id = :orgId', { orgId: organizationId })
+      .where('a.organization_id = :orgId', { orgId: context.organizationId })
+      .andWhere('a.application_id = :appId', { appId: context.applicationId })
       .andWhere('a.status = :status', { status: 'enabled' });
     if (filter?.currency) {
       qb.andWhere('a.supported_currencies @> :currencies::jsonb', {
@@ -102,6 +104,7 @@ export class ProvidersService {
     if (!provider) {
       throw new NotFoundException(`Provider not found: ${dto.providerCode}`);
     }
+    this.assertMethodsSupported(provider, dto.supportedMethods);
 
     const row = this.accounts.create({
       organizationId: dto.organizationId,
@@ -135,6 +138,8 @@ export class ProvidersService {
       row.supportedCurrencies = dto.supportedCurrencies;
     }
     if (dto.supportedMethods !== undefined) {
+      const provider = await this.requireByCode(row.providerCode);
+      this.assertMethodsSupported(provider, dto.supportedMethods);
       row.supportedMethods = dto.supportedMethods;
     }
     if (dto.config !== undefined) row.config = dto.config;
@@ -147,5 +152,23 @@ export class ProvidersService {
   async removeAccount(id: string): Promise<void> {
     const row = await this.requireById(id);
     await this.accounts.remove(row);
+  }
+
+  private assertMethodsSupported(provider: Provider, requested: string[]): void {
+    const catalogue = new Map<string, ProviderMethod>(
+      provider.methods.map((method) => [method.code, method]),
+    );
+    const rejected = requested.filter((code) => {
+      const entry = catalogue.get(code);
+      return !entry || entry.is_special === true;
+    });
+    if (rejected.length > 0) {
+      throw new ApiError(
+        'provider_method_unsupported',
+        HttpStatus.BAD_REQUEST,
+        'requested methods are not selectable for this provider account',
+        { rejected },
+      );
+    }
   }
 }

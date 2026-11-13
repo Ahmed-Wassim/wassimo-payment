@@ -31,8 +31,12 @@ export class PaymentsService {
     }
 
     const account = await this.providers.requireById(dto.provider_account_id);
-    if (!account || account.organizationId !== auth.organizationId) {
-      throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this organization');
+    if (
+      !account ||
+      account.organizationId !== auth.organizationId ||
+      account.applicationId !== auth.applicationId
+    ) {
+      throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this application');
     }
     const ineligible: string[] = [];
     if (account.status !== 'enabled') ineligible.push('account_disabled');
