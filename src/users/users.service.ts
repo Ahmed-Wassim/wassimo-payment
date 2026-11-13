@@ -12,6 +12,7 @@ import { Role } from './entities/role.entity.ts';
 import { Permission } from './entities/permission.entity.ts';
 import { RolePermission } from './entities/role-permission.entity.ts';
 import { FilterDto } from '../common/dto/filter.dto.ts';
+import { toPermissionModel } from './permission.model.ts';
 
 @Injectable()
 export class UsersService {
@@ -66,21 +67,75 @@ export class UsersService {
     return row;
   }
 
-  async listPermissions(): Promise<Permission[]> {
-    return this.permissions.find({ order: { code: 'ASC' } });
+  async requireRoleForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ): Promise<Role> {
+    const row = await this.findRoleById(id);
+    if (!actor.isSuperAdmin && row.organizationId !== actor.organizationId) {
+      throw new NotFoundException(`Role not found ${id}`);
+    }
+    return row;
+  }
+
+  async updateRole(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+    name?: string,
+  ): Promise<Role> {
+    const row = await this.requireRoleForActor(actor, id);
+    if (name !== undefined) row.name = name;
+    return this.roles.save(row);
+  }
+
+  async removeRole(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ): Promise<void> {
+    const row = await this.requireRoleForActor(actor, id);
+    const inUse = await this.memberships.count({ where: { roleId: id } });
+    if (inUse > 0) {
+      throw new BadRequestException(
+        `Role is in use by ${inUse} member(s); reassign them first`,
+      );
+    }
+    await this.roles.remove(row);
+  }
+
+  async listPermissions() {
+    const rows = await this.permissions.find({ order: { code: 'ASC' } });
+    return rows.map((row) => toPermissionModel(row));
   }
 
   async listRolesForActor(
     actor: { organizationId: string | null; isSuperAdmin: boolean },
     filter: FilterDto,
-  ): Promise<Role[]> {
+  ) {
     const organizationId = actor.isSuperAdmin
       ? filter.organizationId ?? null
       : actor.organizationId;
-    return this.roles.find({
+    const roles = await this.roles.find({
       where: organizationId ? { organizationId } : {},
       order: { name: 'ASC' },
     });
+    const roleIds = roles.map((r) => r.id);
+    const perms = roleIds.length
+      ? await this.rolePermissions.find({ where: { roleId: In(roleIds) } })
+      : [];
+    const permsByRole = new Map<string, string[]>();
+    for (const p of perms) {
+      const list = permsByRole.get(p.roleId) ?? [];
+      list.push(p.permissionCode);
+      permsByRole.set(p.roleId, list);
+    }
+    return roles.map((r) => ({
+      id: r.id,
+      name: r.name,
+      organizationId: r.organizationId,
+      createdBy: r.createdBy,
+      createdAt: r.createdAt,
+      permissionCodes: permsByRole.get(r.id) ?? [],
+    }));
   }
 
   async getRolePermissions(roleId: string): Promise<string[]> {
@@ -205,5 +260,43 @@ export class UsersService {
         roleName: role?.name ?? null,
       };
     });
+  }
+
+  async updateMemberForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    userId: string,
+    dto: { roleId?: string; status?: 'active' | 'disabled' },
+  ): Promise<{ id: string; roleId: string; status: string }> {
+    const membership = await this.memberships.findOne({ where: { userId } });
+    if (!membership) {
+      throw new NotFoundException(`Membership not found for user ${userId}`);
+    }
+    if (
+      !actor.isSuperAdmin &&
+      membership.organizationId !== actor.organizationId
+    ) {
+      throw new NotFoundException(`Membership not found for user ${userId}`);
+    }
+
+    if (dto.roleId !== undefined) {
+      const role = await this.findRoleById(dto.roleId);
+      if (role.organizationId !== membership.organizationId) {
+        throw new BadRequestException('role does not belong to the member organization');
+      }
+      membership.roleId = dto.roleId;
+      await this.memberships.save(membership);
+    }
+
+    if (dto.status !== undefined) {
+      const user = await this.findById(userId);
+      user.status = dto.status;
+      await this.users.save(user);
+    }
+
+    return {
+      id: userId,
+      roleId: membership.roleId,
+      status: dto.status ?? (await this.findById(userId)).status,
+    };
   }
 }
