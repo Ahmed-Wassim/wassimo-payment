@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { Organization } from './entities/organization.entity.ts';
 import { Application } from '../applications/entities/application.entity.ts';
 import { FilterDto } from '../common/dto/filter.dto.ts';
+import { toOrganizationModel, OrganizationModel } from './organization.model.ts';
 
 @Injectable()
 export class OrganizationsService {
@@ -19,7 +20,8 @@ export class OrganizationsService {
   ) {}
 
   async findAll() {
-    return await this.repo.find({ order: { createdAt: 'ASC' } });
+    const rows = await this.repo.find({ order: { createdAt: 'ASC' } });
+    return rows.map((row) => toOrganizationModel(row));
   }
 
   async create(dto: { slug: string; name: string; status?: string }) {
@@ -35,7 +37,8 @@ export class OrganizationsService {
       isPlatform: false,
     });
 
-    return this.repo.save(org);
+    const saved = await this.repo.save(org);
+    return toOrganizationModel(saved);
   }
 
   async findById(id: string): Promise<Organization | null> {
@@ -79,7 +82,8 @@ export class OrganizationsService {
     if (dto.name !== undefined) org.name = dto.name;
     if (dto.status !== undefined) org.status = dto.status;
 
-    return this.repo.save(org);
+    const saved = await this.repo.save(org);
+    return toOrganizationModel(saved);
   }
 
   async requireBySlug(slug: string): Promise<Organization> {
@@ -96,15 +100,17 @@ export class OrganizationsService {
   ) {
     if (!actor.isSuperAdmin) {
       if (!actor.organizationId) return [];
-      return this.repo.find({
+      const rows = await this.repo.find({
         where: { id: actor.organizationId },
         order: { createdAt: 'ASC' },
       });
+      return rows.map((row) => toOrganizationModel(row));
     }
 
-    return this.repo.find({
+    const rows = await this.repo.find({
       where: filter.organizationId ? { id: filter.organizationId } : {},
       order: { createdAt: 'ASC' },
     });
+    return rows.map((row) => toOrganizationModel(row));
   }
 }

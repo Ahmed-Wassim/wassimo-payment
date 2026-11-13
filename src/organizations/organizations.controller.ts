@@ -18,6 +18,7 @@ import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { Permission } from '../auth/permission.decorator.ts';
 import { FilterDto } from '../common/dto/filter.dto.ts';
+import { toOrganizationModel } from './organization.model.ts';
 
 @Controller('organizations')
 export class OrganizationsController {
@@ -36,8 +37,8 @@ export class OrganizationsController {
   @Get(':id')
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('org:read')
-  findOne(@Param('id') id: string) {
-    return this.service.requireById(id);
+  async findOne(@Param('id') id: string) {
+    return toOrganizationModel(await this.service.requireById(id));
   }
 
   @Post()
