@@ -43,9 +43,11 @@ export class ProvidersService {
       ? filter.organizationId ?? null
       : actor.organizationId;
 
-    const filtered = organizationId
-      ? rows.filter((r) => r.organizationId === organizationId)
-      : rows;
+    const filtered = rows.filter((r) => {
+      if (organizationId && r.organizationId !== organizationId) return false;
+      if (filter.applicationId && r.applicationId !== filter.applicationId) return false;
+      return true;
+    });
 
     return filtered.map((row) => toProviderAccountModel(row));
   }
@@ -78,6 +80,17 @@ export class ProvidersService {
     return row;
   }
 
+  async requireByIdForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ): Promise<ProviderAccount> {
+    const row = await this.accounts.findOne({ where: { id } });
+    if (!row || (!actor.isSuperAdmin && row.organizationId !== actor.organizationId)) {
+      throw new NotFoundException(`Provider account not found ${id}`);
+    }
+    return row;
+  }
+
   listProviders() {
     return this.providers.find({ order: { code: 'ASC' } });
   }
@@ -88,8 +101,11 @@ export class ProvidersService {
     return row;
   }
 
-  async findOneAccount(id: string): Promise<ProviderAccountModel> {
-    return toProviderAccountModel(await this.requireById(id));
+  async findOneAccount(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ): Promise<ProviderAccountModel> {
+    return toProviderAccountModel(await this.requireByIdForActor(actor, id));
   }
 
   async createAccount(dto: CreateProviderAccountDto) {
@@ -145,8 +161,12 @@ export class ProvidersService {
     return this.createAccount({ ...dto, organizationId: orgId });
   }
 
-  async updateAccount(id: string, dto: UpdateProviderAccountDto) {
-    const row = await this.requireById(id);
+  async updateAccount(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+    dto: UpdateProviderAccountDto,
+  ) {
+    const row = await this.requireByIdForActor(actor, id);
 
     if (dto.displayName !== undefined) row.displayName = dto.displayName;
     if (dto.supportedCurrencies !== undefined) {
@@ -164,8 +184,11 @@ export class ProvidersService {
     return toProviderAccountModel(saved);
   }
 
-  async removeAccount(id: string): Promise<void> {
-    const row = await this.requireById(id);
+  async removeAccount(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ): Promise<void> {
+    const row = await this.requireByIdForActor(actor, id);
     await this.accounts.remove(row);
   }
 

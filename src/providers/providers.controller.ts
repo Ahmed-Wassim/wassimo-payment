@@ -57,8 +57,11 @@ export class ProvidersController {
   @Get('provider-accounts/:id')
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('apps:read')
-  findAccount(@Param('id') id: string): Promise<ProviderAccountModel> {
-    return this.service.findOneAccount(id);
+  findAccount(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+  ): Promise<ProviderAccountModel> {
+    return this.service.findOneAccount(req.actor, id);
   }
 
   @Post('provider-accounts')
@@ -74,16 +77,23 @@ export class ProvidersController {
   @Patch('provider-accounts/:id')
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('org:members:manage')
-  updateAccount(@Param('id') id: string, @Body() dto: UpdateProviderAccountDto) {
-    return this.service.updateAccount(id, dto);
+  updateAccount(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+    @Body() dto: UpdateProviderAccountDto,
+  ) {
+    return this.service.updateAccount(req.actor, id, dto);
   }
 
   @Delete('provider-accounts/:id')
   @HttpCode(204)
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('org:members:manage')
-  async removeAccount(@Param('id') id: string) {
-    await this.service.removeAccount(id);
+  async removeAccount(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+  ) {
+    await this.service.removeAccount(req.actor, id);
   }
 
   @Post('provider-accounts/:id/credentials')
