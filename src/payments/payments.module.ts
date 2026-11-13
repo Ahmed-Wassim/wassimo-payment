@@ -11,6 +11,7 @@ import { ChargeService } from './charge.service.ts';
 import { PaymentsService } from './payments.service.ts';
 import { PaymentsController } from './payments.controller.ts';
 import { ResolutionService } from './resolution.service.ts';
+import { ReturnController } from './return.controller.ts';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { ResolutionService } from './resolution.service.ts';
     ProvidersModule,
     IdempotencyModule,
   ],
-  controllers: [PaymentsController],
+  controllers: [PaymentsController, ReturnController],
   providers: [PaymentsService, ChargeService, ResolutionService],
   exports: [PaymentsService],
 })
