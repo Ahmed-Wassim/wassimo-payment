@@ -15,6 +15,7 @@ import { Provider } from './entities/provider.entity.ts';
 import { ProvidersService } from './providers.service.ts';
 import { ProviderCredentialService } from './provider-credential.service.ts';
 import { ProviderAccountModel } from './provider-account.model.ts';
+import { toProviderModel } from './provider.model.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
 import { UpdateProviderAccountDto } from './dto/update-provider-account.dto.ts';
 import { SetProviderCredentialsDto } from './dto/set-provider-credentials.dto.ts';
@@ -40,8 +41,8 @@ export class ProvidersController {
   @Get('providers/:code')
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('apps:read')
-  findProvider(@Param('code') code: string): Promise<Provider> {
-    return this.service.requireByCode(code);
+  async findProvider(@Param('code') code: string) {
+    return toProviderModel(await this.service.requireByCode(code));
   }
 
   @Get('provider-accounts')

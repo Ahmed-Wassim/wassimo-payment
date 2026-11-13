@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { ApiError } from '../common/api-error.ts';
 import { FilterDto } from '../common/dto/filter.dto.ts';
 import { ProviderAccount } from './entities/provider-account.entity.ts';
+import { toProviderModel } from './provider.model.ts';
 import { Provider, ProviderMethod } from './entities/provider.entity.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
 import { UpdateProviderAccountDto } from './dto/update-provider-account.dto.ts';
@@ -92,7 +93,9 @@ export class ProvidersService {
   }
 
   listProviders() {
-    return this.providers.find({ order: { code: 'ASC' } });
+    return this.providers.find({ order: { code: 'ASC' } }).then((rows) =>
+      rows.map((row) => toProviderModel(row)),
+    );
   }
 
   async requireByCode(code: string): Promise<Provider> {
