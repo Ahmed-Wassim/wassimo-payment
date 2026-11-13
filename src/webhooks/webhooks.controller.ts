@@ -1,4 +1,4 @@
-import { Controller, HttpStatus, Post, Req } from '@nestjs/common';
+import { Controller, HttpStatus, Param, Post, Req } from '@nestjs/common';
 import { ApiError } from '../common/api-error.ts';
 import type { RawWebhookRequest } from './raw-webhook-request.ts';
 import { WebhooksService } from './webhooks.service.ts';
@@ -18,6 +18,29 @@ export class WebhooksController {
       );
     }
 
+    return this.handle(providerCode, req);
+  }
+
+  @Post('webhooks/:providerCode')
+  async ingestByProvider(
+    @Param('providerCode') providerCode: string,
+    @Req() req: RawWebhookRequest,
+  ) {
+    if (providerCode === 'provider') {
+      const headerCode = (req.headers['x-provider-code'] as string | undefined)?.trim();
+      if (!headerCode) {
+        throw new ApiError(
+          'validation_error',
+          HttpStatus.BAD_REQUEST,
+          'x-provider-code header required',
+        );
+      }
+      return this.handle(headerCode, req);
+    }
+    return this.handle(providerCode, req);
+  }
+
+  private async handle(providerCode: string, req: RawWebhookRequest) {
     if (!req.rawBody) {
       throw new ApiError(
         'validation_error',
@@ -33,6 +56,6 @@ export class WebhooksController {
       }
     }
 
-    return this.webhooks.ingest(providerCode, headers, req.rawBody);
+    return this.webhooks.ingest(providerCode.trim().toLowerCase(), headers, req.rawBody);
   }
 }

@@ -10,6 +10,7 @@ export interface EnvVars {
   JWT_SECRET: string;
   ENCRYPTION_KEY?: string;
   MOCK_WEBHOOK_SECRET: string;
+  APP_URL: string;
 }
 
 export const envValidationSchema = Joi.object<EnvVars, true>({
@@ -24,6 +25,7 @@ export const envValidationSchema = Joi.object<EnvVars, true>({
   JWT_SECRET: Joi.string().default('dev-jwt-secret-change-in-prod'),
   ENCRYPTION_KEY: Joi.string().hex().length(64).optional(),
   MOCK_WEBHOOK_SECRET: Joi.string().min(1).default('mock-dev-secret'),
+  APP_URL: Joi.string().uri().default('http://localhost:9053'),
 }).unknown(true);
 
 export function validateEnv(env: NodeJS.ProcessEnv): EnvVars {

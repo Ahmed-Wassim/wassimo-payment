@@ -1,6 +1,8 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module.ts';
+import { CurrenciesModule } from '../currencies/currencies.module.ts';
+import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { UsersModule } from '../users/users.module.ts';
 import { MockAdapter } from './adapters/mock/mock.adapter.ts';
 import { MockHostedController } from './adapters/mock/mock-hosted.controller.ts';
@@ -16,7 +18,13 @@ import { ProvidersService } from './providers.service.ts';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Provider, ProviderAccount, ProviderCredential]),
+    TypeOrmModule.forFeature([
+      Provider,
+      ProviderAccount,
+      ProviderCredential,
+      PaymentAttempt,
+    ]),
+    CurrenciesModule,
     forwardRef(() => AuthModule),
     forwardRef(() => UsersModule),
   ],

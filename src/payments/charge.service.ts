@@ -95,7 +95,7 @@ export class ChargeService {
       );
     }
 
-    const adapter = this.factory.forAccount(account);
+    const adapter = await this.factory.forAccount(account);
 
     const attempt = await this.attempts.manager.transaction(async (tx) =>
       tx.save(PaymentAttempt, {

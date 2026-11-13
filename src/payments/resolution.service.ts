@@ -87,7 +87,7 @@ export class ResolutionService {
       );
     }
 
-    const adapter = this.factory.forAccount(account);
+    const adapter = await this.factory.forAccount(account);
 
     let outcome: 'succeeded' | 'failed' | 'unknown' = 'unknown';
     if (attempt.providerReference) {

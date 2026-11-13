@@ -82,4 +82,20 @@ export class CurrenciesService {
     await this.repo.remove(currency);
     return { deleted: true, code: normalized };
   }
+
+  minorToDecimal(amountMinor: bigint | number | string, exponent: number): string {
+    const value =
+      typeof amountMinor === 'bigint'
+        ? amountMinor
+        : BigInt(typeof amountMinor === 'string' ? amountMinor : Math.trunc(amountMinor));
+    const negative = value < 0n;
+    const abs = negative ? -value : value;
+    if (exponent === 0) {
+      return `${negative ? '-' : ''}${abs.toString()}`;
+    }
+    const factor = 10n ** BigInt(exponent);
+    const whole = abs / factor;
+    const fraction = (abs % factor).toString().padStart(exponent, '0');
+    return `${negative ? '-' : ''}${whole.toString()}.${fraction}`;
+  }
 }

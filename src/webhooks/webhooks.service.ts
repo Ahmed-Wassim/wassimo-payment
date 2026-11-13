@@ -3,8 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiError } from '../common/api-error.ts';
 import { PaymentProviderFactory } from '../providers/payment-provider.factory.ts';
-import type { ProviderEvent } from '../providers/adapter.ts';
-import { ProviderAccount } from '../providers/entities/provider-account.entity.ts';
 import { attemptTransition } from '../payments/attempt-states.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { Payment } from '../payments/entities/payment.entity.ts';
@@ -26,9 +24,7 @@ export class WebhooksService {
     headers: Record<string, string>,
     rawBody: Buffer,
   ): Promise<{ status: string }> {
-    const adapter = this.factory.forAccount({
-      providerCode,
-    } as ProviderAccount);
+    const adapter = await this.factory.forProviderCode(providerCode);
 
     const event = await adapter.verifyWebhook(headers, rawBody);
     if (!event) {
