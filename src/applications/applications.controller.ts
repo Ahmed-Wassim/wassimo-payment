@@ -35,8 +35,11 @@ export class ApplicationsController {
 
   @Get(':id')
   @Permission('apps:read')
-  findOne(@Param('id') id: string) {
-    return this.service.requireById(id);
+  findOne(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+  ) {
+    return this.service.requireByIdForActor(req.actor, id);
   }
 
   @Post()
@@ -47,14 +50,21 @@ export class ApplicationsController {
 
   @Patch(':id')
   @Permission('apps:update')
-  update(@Param('id') id: string, @Body() dto: UpdateApplicationDto) {
-    return this.service.update(id, dto);
+  update(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+    @Body() dto: UpdateApplicationDto,
+  ) {
+    return this.service.update(req.actor, id, dto);
   }
 
   @Delete(':id')
   @HttpCode(204)
   @Permission('apps:update')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  async remove(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+  ) {
+    await this.service.remove(req.actor, id);
   }
 }

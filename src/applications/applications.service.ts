@@ -53,6 +53,20 @@ export class ApplicationsService {
     return app;
   }
 
+  async requireByIdForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ): Promise<Application> {
+    const app = await this.repo.findOne({
+      where: { id },
+      relations: { organization: true },
+    });
+    if (!app || (!actor.isSuperAdmin && app.organization?.id !== actor.organizationId)) {
+      throw new NotFoundException(`Application not found ${id}`);
+    }
+    return app;
+  }
+
   async createForOrg(
     organizationId: string | null,
     dto: { slug: string; name: string },
@@ -89,8 +103,8 @@ export class ApplicationsService {
     return this.repo.save(app);
   }
 
-  async update(id: string, dto: UpdateApplicationDto) {
-    const app = await this.requireById(id);
+  async update(actor: { organizationId: string | null; isSuperAdmin: boolean }, id: string, dto: UpdateApplicationDto) {
+    const app = await this.requireByIdForActor(actor, id);
 
     if (dto.name !== undefined) app.name = dto.name;
     if (dto.status !== undefined) app.status = dto.status;
@@ -98,8 +112,8 @@ export class ApplicationsService {
     return this.repo.save(app);
   }
 
-  async remove(id: string) {
-    const app = await this.requireById(id);
+  async remove(actor: { organizationId: string | null; isSuperAdmin: boolean }, id: string) {
+    const app = await this.requireByIdForActor(actor, id);
 
     const credentials = await this.credentials.count({
       where: { application: { id: app.id } },
