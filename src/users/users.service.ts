@@ -88,6 +88,17 @@ export class UsersService {
     return rows.map((r) => r.permissionCode);
   }
 
+  async getRolePermissionsForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    roleId: string,
+  ): Promise<string[]> {
+    const role = await this.findRoleById(roleId);
+    if (!actor.isSuperAdmin && role.organizationId !== actor.organizationId) {
+      throw new ForbiddenException('Cannot view roles in another organization');
+    }
+    return this.getRolePermissions(roleId);
+  }
+
   async hasPermission(roleId: string, permission: string): Promise<boolean> {
     const perms = await this.getRolePermissions(roleId);
     return perms.includes(permission);
@@ -146,15 +157,39 @@ export class UsersService {
   async listMembersForActor(
     actor: { organizationId: string | null; isSuperAdmin: boolean },
     filter: FilterDto,
-  ): Promise<User[]> {
+  ) {
     const organizationId = actor.isSuperAdmin
       ? filter.organizationId ?? null
       : actor.organizationId;
     const memberships = await this.memberships.find({
       where: organizationId ? { organizationId } : {},
     });
+    if (memberships.length === 0) return [];
+
     const userIds = memberships.map((m) => m.userId);
-    if (userIds.length === 0) return [];
-    return this.users.findBy({ id: In(userIds) });
+    const roleIds = [...new Set(memberships.map((m) => m.roleId))];
+    const [userRows, roleRows] = await Promise.all([
+      this.users.findBy({ id: In(userIds) }),
+      roleIds.length ? this.roles.findBy({ id: In(roleIds) }) : Promise.resolve([] as Role[]),
+    ]);
+
+    const userById = new Map(userRows.map((u) => [u.id, u]));
+    const roleById = new Map(roleRows.map((r) => [r.id, r]));
+
+    return memberships.map((membership) => {
+      const user = userById.get(membership.userId);
+      const role = roleById.get(membership.roleId);
+      return {
+        id: user?.id ?? membership.userId,
+        email: user?.email ?? '',
+        status: user?.status,
+        isSuperAdmin: user?.isSuperAdmin ?? false,
+        createdAt: user?.createdAt,
+        updatedAt: user?.updatedAt,
+        organizationId: membership.organizationId,
+        roleId: membership.roleId,
+        roleName: role?.name ?? null,
+      };
+    });
   }
 }

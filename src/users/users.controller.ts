@@ -39,6 +39,15 @@ export class UsersController {
     return this.users.createRole(req.actor.organizationId, dto.name, req.actor.userId);
   }
 
+  @Get('roles/:id/permissions')
+  @Permission('org:members:manage')
+  listRolePermissions(
+    @Req() req: { actor: ActorContext },
+    @Param('id') roleId: string,
+  ) {
+    return this.users.getRolePermissionsForActor(req.actor, roleId);
+  }
+
   @Post('roles/:id/permissions')
   @Permission('org:members:manage')
   async assignPermissions(
@@ -63,15 +72,21 @@ export class UsersController {
   @Permission('org:members:manage')
   async createMember(@Req() req: { actor: ActorContext }, @Body() dto: CreateMemberDto) {
     const hash = await bcrypt.hash(dto.password, 10);
-    const organizationId = req.actor.organizationId ?? null;
+    const organizationId = req.actor.isSuperAdmin
+      ? dto.organizationId ?? req.actor.organizationId ?? null
+      : req.actor.organizationId ?? null;
     if (!organizationId) {
       throw new BadRequestException(
         'organizationId is required for platform actors creating members',
       );
     }
+    const role = await this.users.findRoleById(dto.roleId);
+    if (role.organizationId !== organizationId) {
+      throw new BadRequestException('role does not belong to the selected organization');
+    }
     const user = await this.users.create({ email: dto.email, passwordHash: hash });
     await this.users.createMembership(user.id, organizationId, dto.roleId);
-    return { id: user.id, email: user.email, roleId: dto.roleId };
+    return { id: user.id, email: user.email, roleId: dto.roleId, organizationId };
   }
 
   @Get('permissions')
