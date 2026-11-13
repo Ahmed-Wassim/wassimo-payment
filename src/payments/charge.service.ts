@@ -119,6 +119,7 @@ export class ChargeService {
         amountMinor: BigInt(payment.amountMinor),
         currency: payment.currency,
         method: payment.method,
+        accountConfig: (account.config ?? {}) as Record<string, unknown>,
       });
       providerReference = result.providerReference;
       redirectUrl = result.redirectUrl;

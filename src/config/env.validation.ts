@@ -9,6 +9,7 @@ export interface EnvVars {
   EXPIRY_SWEEP_SECONDS: number;
   JWT_SECRET: string;
   ENCRYPTION_KEY?: string;
+  MOCK_WEBHOOK_SECRET: string;
 }
 
 export const envValidationSchema = Joi.object<EnvVars, true>({
@@ -22,6 +23,7 @@ export const envValidationSchema = Joi.object<EnvVars, true>({
   EXPIRY_SWEEP_SECONDS: Joi.number().integer().min(1).default(60),
   JWT_SECRET: Joi.string().default('dev-jwt-secret-change-in-prod'),
   ENCRYPTION_KEY: Joi.string().hex().length(64).optional(),
+  MOCK_WEBHOOK_SECRET: Joi.string().min(1).default('mock-dev-secret'),
 }).unknown(true);
 
 export function validateEnv(env: NodeJS.ProcessEnv): EnvVars {

@@ -8,6 +8,7 @@ export interface AppConfig {
   expiry: { sweepSeconds: number };
   jwt: { secret: string };
   encryption: { key: string | null };
+  mock: { webhookSecret: string };
 }
 
 export function loadConfig(): AppConfig {
@@ -20,5 +21,6 @@ export function loadConfig(): AppConfig {
     expiry: { sweepSeconds: env.EXPIRY_SWEEP_SECONDS },
     jwt: { secret: env.JWT_SECRET },
     encryption: { key: env.ENCRYPTION_KEY ?? null },
+    mock: { webhookSecret: env.MOCK_WEBHOOK_SECRET },
   };
 }

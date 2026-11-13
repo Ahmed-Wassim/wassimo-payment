@@ -17,6 +17,7 @@ export interface CheckoutInput {
   amountMinor: bigint;
   currency: string;
   method: string;
+  accountConfig?: Record<string, unknown>;
 }
 
 export interface CheckoutResult {

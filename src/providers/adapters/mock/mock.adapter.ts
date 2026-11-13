@@ -8,7 +8,7 @@ import {
   ProviderEvent,
 } from '../../adapter.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
-import { MockHostedService } from './mock-hosted.service.ts';
+import { MockHostedService, MockWebhookPayload } from './mock-hosted.service.ts';
 import { createHmac, timingSafeEqual } from 'crypto';
 
 @Injectable()
@@ -26,11 +26,16 @@ export class MockAdapter implements ProviderAdapter {
   }
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
+    const webhookSecret =
+      typeof input.accountConfig?.hmacSecret === 'string'
+        ? input.accountConfig.hmacSecret
+        : undefined;
     const session = this.hosted.openSession(
       input.paymentId,
       input.amountMinor,
       input.currency,
       input.method,
+      webhookSecret,
     );
     return {
       providerReference: session.sessionRef,
@@ -56,9 +61,15 @@ export class MockAdapter implements ProviderAdapter {
       return null;
     }
 
-    const expected = createHmac('sha256', this.hosted.webhookSecret())
-      .update(rawBody)
-      .digest('hex');
+    let body: MockWebhookPayload;
+    try {
+      body = JSON.parse(rawBody.toString('utf8')) as MockWebhookPayload;
+    } catch {
+      return null;
+    }
+
+    const secret = this.hosted.webhookSecretFor(body.provider_reference ?? '');
+    const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
 
     const signatureBuf = Buffer.from(signature);
     const expectedBuf = Buffer.from(expected);
@@ -68,13 +79,6 @@ export class MockAdapter implements ProviderAdapter {
     ) {
       return null;
     }
-
-    const body = JSON.parse(rawBody.toString('utf8')) as {
-      event_id?: string;
-      event?: string;
-      provider_reference?: string;
-      result?: string;
-    };
 
     const result =
       body.result === 'succeeded' ||
