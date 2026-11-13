@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import { Organization } from '../organizations/entities/organization.entity.ts';
 import { UpdateApplicationDto } from './dto/update-application.dto.ts';
 import { FilterDto } from '../common/dto/filter.dto.ts';
+import { toApplicationModel } from './application.model.ts';
 import { ApiCredential } from '../credentials/entities/api-credential.entity.ts';
 
 @Injectable()
@@ -24,10 +25,11 @@ export class ApplicationsService {
   ) {}
 
   async findAll() {
-    return this.repo.find({
+    const rows = await this.repo.find({
       relations: { organization: true },
       order: { createdAt: 'ASC' },
     });
+    return rows.map((row) => toApplicationModel(row));
   }
 
   async listForActor(
@@ -37,11 +39,12 @@ export class ApplicationsService {
     const organizationId = actor.isSuperAdmin
       ? filter.organizationId ?? null
       : actor.organizationId;
-    return this.repo.find({
+    const rows = await this.repo.find({
       where: organizationId ? { organization: { id: organizationId } } : {},
       relations: { organization: true },
       order: { createdAt: 'ASC' },
     });
+    return rows.map((row) => toApplicationModel(row));
   }
 
   async requireById(id: string): Promise<Application> {
@@ -100,7 +103,8 @@ export class ApplicationsService {
       organization: org,
     });
 
-    return this.repo.save(app);
+    const saved = await this.repo.save(app);
+    return toApplicationModel(saved);
   }
 
   async update(actor: { organizationId: string | null; isSuperAdmin: boolean }, id: string, dto: UpdateApplicationDto) {
@@ -109,7 +113,8 @@ export class ApplicationsService {
     if (dto.name !== undefined) app.name = dto.name;
     if (dto.status !== undefined) app.status = dto.status;
 
-    return this.repo.save(app);
+    const saved = await this.repo.save(app);
+    return toApplicationModel(saved);
   }
 
   async remove(actor: { organizationId: string | null; isSuperAdmin: boolean }, id: string) {
