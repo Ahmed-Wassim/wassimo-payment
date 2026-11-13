@@ -36,7 +36,7 @@ export class UsersController {
   @Post('roles')
   @Permission('org:members:manage')
   createRole(@Req() req: { actor: ActorContext }, @Body() dto: CreateRoleDto) {
-    return this.users.createRole(req.actor.organizationId, dto.name, req.actor.userId);
+    return this.users.createRoleForActor(req.actor, dto.name, dto.organizationId);
   }
 
   @Get('roles/:id/permissions')

@@ -123,6 +123,20 @@ export class UsersService {
     return this.roles.save(role);
   }
 
+  async createRoleForActor(
+    actor: { userId: string; organizationId: string | null; isSuperAdmin: boolean },
+    name: string,
+    organizationId?: string,
+  ): Promise<Role> {
+    const orgId = actor.isSuperAdmin ? organizationId ?? null : actor.organizationId ?? null;
+    if (!orgId) {
+      throw new BadRequestException(
+        'organizationId is required for platform actors creating roles',
+      );
+    }
+    return this.createRole(orgId, name, actor.userId);
+  }
+
   async createMembership(userId: string, organizationId: string, roleId: string): Promise<OrgMembership> {
     const membership = this.memberships.create({ userId, organizationId, roleId });
     return this.memberships.save(membership);
