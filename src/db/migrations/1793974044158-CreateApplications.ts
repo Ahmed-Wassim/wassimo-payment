@@ -10,12 +10,6 @@ export class CreateApplications1793974044158 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "applications" ADD CONSTRAINT "FK_8808eef8dd417f90bcf91cb9fb6" FOREIGN KEY ("organization_id") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
     );
-    await queryRunner.query(`
-            INSERT INTO applications (organization_id, slug, name)
-            SELECT id, 'wassimo-order', 'wassimo-order'
-            FROM organizations
-            WHERE slug = 'wassimo'
-        `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

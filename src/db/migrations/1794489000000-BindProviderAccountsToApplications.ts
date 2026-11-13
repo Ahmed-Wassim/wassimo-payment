@@ -6,16 +6,6 @@ export class BindProviderAccountsToApplications1794489000000
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-        INSERT INTO applications (organization_id, slug, name)
-        SELECT id, 'payment-consumer', 'payment-consumer'
-        FROM organizations
-        WHERE slug = 'wassimo'
-        AND NOT EXISTS (
-          SELECT 1 FROM applications WHERE slug = 'payment-consumer'
-        )
-    `);
-
-    await queryRunner.query(`
         ALTER TABLE "provider_accounts"
         ADD "application_id" uuid
     `);
@@ -49,10 +39,6 @@ export class BindProviderAccountsToApplications1794489000000
     await queryRunner.query(`
         ALTER TABLE "provider_accounts"
         DROP COLUMN "application_id"
-    `);
-    await queryRunner.query(`
-        DELETE FROM applications
-        WHERE slug = 'payment-consumer'
     `);
   }
 }

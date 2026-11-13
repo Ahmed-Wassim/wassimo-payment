@@ -10,12 +10,6 @@ export class CreateApiCredentials1793979951211 implements MigrationInterface {
     await queryRunner.query(
       `ALTER TABLE "api_credentials" ADD CONSTRAINT "FK_143f5313f8e5f505c983801959c" FOREIGN KEY ("application_id") REFERENCES "applications"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
     );
-    await queryRunner.query(`
-            INSERT INTO api_credentials (application_id, key_id, secret_hash, prefix, environment, scopes)
-            SELECT id, 'edf6286f', 'eee1119dc8a5173aa986066b1597e526e99ac98d5ca8f60b69ce607cbbf63aca', 'wpk_edf6', 'test', '["payments:create"]'
-            FROM applications
-            WHERE slug = 'wassimo-order'
-        `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

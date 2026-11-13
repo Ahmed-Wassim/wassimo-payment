@@ -13,11 +13,6 @@ export class CreateOrganization1793814650820 implements MigrationInterface {
                 "updated_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             );
         `);
-
-    await queryRunner.query(`
-            INSERT INTO organizations (slug, name, is_platform) VALUES
-            ('wassimo', 'Wassimo', true);
-        `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

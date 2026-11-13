@@ -135,7 +135,7 @@ export class CreateUsersRolesPermissions1794254878805 implements MigrationInterf
 
     await queryRunner.query(`
       INSERT INTO "users" ("email", "password_hash", "is_super_admin")
-      VALUES ('superadmin@wassimo.local', '$2b$10$placeholder_hash_replace_before_use', true);
+      VALUES ('superadmin@wassimo.local', '$2b$10$8RK5fNTSm20/LluvZWPCBu3jX53axu0l48O9cdIM3mnBO73I6Og3e', true);
     `);
 
     await queryRunner.query(`
