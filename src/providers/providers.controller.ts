@@ -21,6 +21,7 @@ import { SetProviderCredentialsDto } from './dto/set-provider-credentials.dto.ts
 import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { Permission } from '../auth/permission.decorator.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 
 @Controller()
 export class ProvidersController {
@@ -48,12 +49,9 @@ export class ProvidersController {
   @Permission('apps:read')
   listAccounts(
     @Req() req: { actor: ActorContext },
-    @Query('organizationId') filter?: string,
+    @Query() filter: FilterDto,
   ): Promise<ProviderAccountModel[]> {
-    const orgId = req.actor.isSuperAdmin && filter
-      ? filter
-      : req.actor.organizationId;
-    return this.service.listAccountsForActor(req.actor, orgId);
+    return this.service.listAccountsForActor(req.actor, filter);
   }
 
   @Get('provider-accounts/:id')

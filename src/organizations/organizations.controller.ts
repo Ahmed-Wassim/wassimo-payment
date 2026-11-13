@@ -17,6 +17,7 @@ import { UpdateOrganizationDto } from './dto/update-organization.dto.ts';
 import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { Permission } from '../auth/permission.decorator.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 
 @Controller('organizations')
 export class OrganizationsController {
@@ -27,11 +28,9 @@ export class OrganizationsController {
   @Permission('org:read')
   findAll(
     @Req() req: { actor: ActorContext },
-    @Query('organizationId') filter: string,
+    @Query() filter: FilterDto,
   ) {
-    const orgId =
-      req.actor.isSuperAdmin && filter ? filter : req.actor.organizationId;
-    return this.service.findAllForActor(req.actor, orgId);
+    return this.service.findAllForActor(req.actor, filter);
   }
 
   @Get(':id')

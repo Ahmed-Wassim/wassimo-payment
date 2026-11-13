@@ -1,6 +1,7 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiKeyGuard } from '../auth/api-key.guard.ts';
 import { AuthContext } from '../auth/auth-context.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
 
 @Controller()
@@ -11,8 +12,7 @@ export class OptionsController {
   @UseGuards(ApiKeyGuard)
   async options(
     @Req() req: { auth?: AuthContext },
-    @Query('currency') currency?: string,
-    @Query('method') method?: string,
+    @Query() filter: FilterDto,
   ) {
     const auth = req.auth!;
     const accounts = await this.providers.findForContext(
@@ -21,8 +21,8 @@ export class OptionsController {
         applicationId: auth.applicationId,
       },
       {
-        currency: currency?.toUpperCase(),
-        method: method?.toLowerCase(),
+        currency: filter.currency?.toUpperCase(),
+        method: filter.method?.toLowerCase(),
       },
     );
     return {

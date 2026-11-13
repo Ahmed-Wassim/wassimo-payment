@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { CredentialsService } from './credentials.service.ts';
 import { IssueCredentialDto } from './dto/issue-credential.dto.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { Permission } from '../auth/permission.decorator.ts';
@@ -25,12 +26,9 @@ export class CredentialsController {
   @Permission('keys:read')
   findAll(
     @Req() req: { actor: ActorContext },
-    @Query('organizationId') filter?: string,
+    @Query() filter: FilterDto,
   ) {
-    const orgId = req.actor.isSuperAdmin && filter
-      ? filter
-      : req.actor.organizationId;
-    return this.service.findAllForActor(req.actor, orgId);
+    return this.service.findAllForActor(req.actor, filter);
   }
 
   @Get(':id')

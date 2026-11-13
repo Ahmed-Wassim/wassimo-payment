@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Post, Req, UseGuards, Param, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  UseGuards,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { JwtGuard, ActorContext } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { Permission } from '../auth/permission.decorator.ts';
@@ -6,6 +16,7 @@ import { UsersService } from './users.service.ts';
 import { CreateRoleDto } from './dto/create-role.dto.ts';
 import { AssignPermissionsDto } from './dto/assign-permissions.dto.ts';
 import { CreateMemberDto } from './dto/create-member.dto.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 import * as bcrypt from 'bcrypt';
 
 @Controller()
@@ -17,12 +28,9 @@ export class UsersController {
   @Permission('org:members:manage')
   listRoles(
     @Req() req: { actor: ActorContext },
-    @Query('organizationId') filter?: string,
+    @Query() filter: FilterDto,
   ) {
-    const orgId = req.actor.isSuperAdmin && filter
-      ? filter
-      : req.actor.organizationId;
-    return this.users.listRolesByOrg(orgId);
+    return this.users.listRolesForActor(req.actor, filter);
   }
 
   @Post('roles')
@@ -38,7 +46,7 @@ export class UsersController {
     @Param('id') roleId: string,
     @Body() dto: AssignPermissionsDto,
   ) {
-    await this.users.setRolePermissions(roleId, dto.permissionCodes, req.actor.organizationId);
+    await this.users.setRolePermissions(req.actor, roleId, dto.permissionCodes);
     return { ok: true };
   }
 
@@ -46,20 +54,23 @@ export class UsersController {
   @Permission('org:members:read')
   listMembers(
     @Req() req: { actor: ActorContext },
-    @Query('organizationId') filter?: string,
+    @Query() filter: FilterDto,
   ) {
-    const orgId = req.actor.isSuperAdmin && filter
-      ? filter
-      : req.actor.organizationId;
-    return this.users.listByOrg(orgId);
+    return this.users.listMembersForActor(req.actor, filter);
   }
 
   @Post('users')
   @Permission('org:members:manage')
   async createMember(@Req() req: { actor: ActorContext }, @Body() dto: CreateMemberDto) {
     const hash = await bcrypt.hash(dto.password, 10);
+    const organizationId = req.actor.organizationId ?? null;
+    if (!organizationId) {
+      throw new BadRequestException(
+        'organizationId is required for platform actors creating members',
+      );
+    }
     const user = await this.users.create({ email: dto.email, passwordHash: hash });
-    await this.users.createMembership(user.id, req.actor.organizationId, dto.roleId);
+    await this.users.createMembership(user.id, organizationId, dto.roleId);
     return { id: user.id, email: user.email, roleId: dto.roleId };
   }
 

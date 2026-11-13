@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -8,6 +9,7 @@ import { Application } from './entities/application.entity.ts';
 import { Repository } from 'typeorm';
 import { Organization } from '../organizations/entities/organization.entity.ts';
 import { UpdateApplicationDto } from './dto/update-application.dto.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 import { ApiCredential } from '../credentials/entities/api-credential.entity.ts';
 
 @Injectable()
@@ -28,9 +30,15 @@ export class ApplicationsService {
     });
   }
 
-  async listByOrg(organizationId: string) {
+  async listForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    filter: FilterDto,
+  ) {
+    const organizationId = actor.isSuperAdmin
+      ? filter.organizationId ?? null
+      : actor.organizationId;
     return this.repo.find({
-      where: { organization: { id: organizationId } },
+      where: organizationId ? { organization: { id: organizationId } } : {},
       relations: { organization: true },
       order: { createdAt: 'ASC' },
     });
@@ -45,7 +53,15 @@ export class ApplicationsService {
     return app;
   }
 
-  async createForOrg(organizationId: string, dto: { slug: string; name: string }) {
+  async createForOrg(
+    organizationId: string | null,
+    dto: { slug: string; name: string },
+  ) {
+    if (!organizationId) {
+      throw new BadRequestException(
+        'organizationId is required for platform actors creating applications',
+      );
+    }
     return this.create({ slug: dto.slug, name: dto.name, organizationId });
   }
 

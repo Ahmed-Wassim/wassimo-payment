@@ -1,7 +1,13 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiError } from '../common/api-error.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 import { ProviderAccount } from './entities/provider-account.entity.ts';
 import { Provider, ProviderMethod } from './entities/provider.entity.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
@@ -28,14 +34,18 @@ export class ProvidersService {
   }
 
   async listAccountsForActor(
-    actor: { isSuperAdmin: boolean },
-    scopedOrgId: string,
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    filter: FilterDto,
   ): Promise<ProviderAccountModel[]> {
     const rows = await this.accounts.find({ order: { createdAt: 'ASC' } });
 
-    const filtered = actor.isSuperAdmin
-      ? rows
-      : rows.filter((r) => r.organizationId === scopedOrgId);
+    const organizationId = actor.isSuperAdmin
+      ? filter.organizationId ?? null
+      : actor.organizationId;
+
+    const filtered = organizationId
+      ? rows.filter((r) => r.organizationId === organizationId)
+      : rows;
 
     return filtered.map((row) => toProviderAccountModel(row));
   }
@@ -123,10 +133,15 @@ export class ProvidersService {
   }
 
   async createAccountForActor(
-    actor: { organizationId: string; isSuperAdmin: boolean },
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
     dto: CreateProviderAccountDto,
   ) {
     const orgId = actor.isSuperAdmin ? dto.organizationId : actor.organizationId;
+    if (!orgId) {
+      throw new BadRequestException(
+        'organizationId is required for platform actors creating accounts',
+      );
+    }
     return this.createAccount({ ...dto, organizationId: orgId });
   }
 

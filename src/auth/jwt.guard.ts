@@ -10,8 +10,8 @@ import { UsersService } from '../users/users.service.ts';
 export interface ActorContext {
   userId: string;
   email: string;
-  organizationId: string;
-  roleId: string;
+  organizationId: string | null;
+  roleId: string | null;
   isSuperAdmin: boolean;
 }
 
@@ -31,8 +31,8 @@ export class JwtGuard implements CanActivate {
     const token = header.slice(7);
     let payload: {
       sub: string;
-      orgId: string;
-      roleId: string;
+      orgId: string | null;
+      roleId: string | null;
       isSuperAdmin: boolean;
     };
     try {

@@ -1,11 +1,17 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity.ts';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { OrgMembership } from './entities/org-membership.entity.ts';
 import { Role } from './entities/role.entity.ts';
 import { Permission } from './entities/permission.entity.ts';
 import { RolePermission } from './entities/role-permission.entity.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 
 @Injectable()
 export class UsersService {
@@ -41,6 +47,12 @@ export class UsersService {
     return this.memberships.findOne({ where: { userId } });
   }
 
+  async findPlatformAdminRole(): Promise<Role | null> {
+    return this.roles.findOne({
+      where: { name: 'Super Admin', organizationId: IsNull() },
+    });
+  }
+
   async requireMembership(userId: string): Promise<OrgMembership> {
     const row = await this.findMembership(userId);
     if (!row)
@@ -58,9 +70,15 @@ export class UsersService {
     return this.permissions.find({ order: { code: 'ASC' } });
   }
 
-  async listRolesByOrg(organizationId: string): Promise<Role[]> {
+  async listRolesForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    filter: FilterDto,
+  ): Promise<Role[]> {
+    const organizationId = actor.isSuperAdmin
+      ? filter.organizationId ?? null
+      : actor.organizationId;
     return this.roles.find({
-      where: { organizationId },
+      where: organizationId ? { organizationId } : {},
       order: { name: 'ASC' },
     });
   }
@@ -80,7 +98,16 @@ export class UsersService {
     return this.users.save(user);
   }
 
-  async createRole(organizationId: string, name: string, createdBy: string): Promise<Role> {
+  async createRole(
+    organizationId: string | null,
+    name: string,
+    createdBy: string,
+  ): Promise<Role> {
+    if (!organizationId) {
+      throw new BadRequestException(
+        'organizationId is required for platform actors creating roles',
+      );
+    }
     const role = this.roles.create({ organizationId, name, createdBy });
     return this.roles.save(role);
   }
@@ -98,9 +125,16 @@ export class UsersService {
     await this.rolePermissions.save(this.rolePermissions.create({ roleId, permissionCode }));
   }
 
-  async setRolePermissions(roleId: string, permissionCodes: string[], organizationId: string): Promise<void> {
+  async setRolePermissions(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    roleId: string,
+    permissionCodes: string[],
+  ): Promise<void> {
     const role = await this.findRoleById(roleId);
-    if (role.organizationId !== organizationId) {
+    if (
+      !actor.isSuperAdmin &&
+      role.organizationId !== actor.organizationId
+    ) {
       throw new ForbiddenException('Cannot modify roles in another organization');
     }
     await this.rolePermissions.delete({ roleId });
@@ -109,8 +143,16 @@ export class UsersService {
     }
   }
 
-  async listByOrg(organizationId: string): Promise<User[]> {
-    const memberships = await this.memberships.find({ where: { organizationId } });
+  async listMembersForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    filter: FilterDto,
+  ): Promise<User[]> {
+    const organizationId = actor.isSuperAdmin
+      ? filter.organizationId ?? null
+      : actor.organizationId;
+    const memberships = await this.memberships.find({
+      where: organizationId ? { organizationId } : {},
+    });
     const userIds = memberships.map((m) => m.userId);
     if (userIds.length === 0) return [];
     return this.users.findBy({ id: In(userIds) });

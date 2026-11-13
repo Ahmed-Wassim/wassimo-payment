@@ -14,6 +14,7 @@ import {
 import { ApplicationsService } from './applications.service.ts';
 import { CreateApplicationDto } from './dto/create-application.dto.ts';
 import { UpdateApplicationDto } from './dto/update-application.dto.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 import { JwtGuard, ActorContext } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { Permission } from '../auth/permission.decorator.ts';
@@ -27,12 +28,9 @@ export class ApplicationsController {
   @Permission('apps:read')
   listApps(
     @Req() req: { actor: ActorContext },
-    @Query('organizationId') orgFilter?: string,
+    @Query() filter: FilterDto,
   ) {
-    const orgId = req.actor.isSuperAdmin && orgFilter
-      ? orgFilter
-      : req.actor.organizationId;
-    return this.service.listByOrg(orgId);
+    return this.service.listForActor(req.actor, filter);
   }
 
   @Get(':id')
@@ -44,7 +42,7 @@ export class ApplicationsController {
   @Post()
   @Permission('apps:create')
   create(@Req() req: { actor: ActorContext }, @Body() dto: CreateApplicationDto) {
-    return this.service.createForOrg(req.actor.organizationId, dto);
+    return this.service.createForOrg(req.actor.organizationId ?? dto.organizationId ?? null, dto);
   }
 
   @Patch(':id')

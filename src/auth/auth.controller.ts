@@ -47,6 +47,19 @@ export class AuthController {
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
     if (user.status !== 'active') throw new UnauthorizedException('Account disabled');
+    if (user.isSuperAdmin) {
+      const role = await this.users.findPlatformAdminRole();
+      const permissions = role
+        ? await this.users.getRolePermissions(role.id)
+        : [];
+      const token = this.jwt.sign({
+        sub: user.id,
+        orgId: null,
+        roleId: role?.id ?? null,
+        isSuperAdmin: true,
+      });
+      return { accessToken: token, permissions };
+    }
     const membership = await this.users.requireMembership(user.id);
     const permissions = await this.users.getRolePermissions(membership.roleId);
     const token = this.jwt.sign({
@@ -61,8 +74,15 @@ export class AuthController {
   @Get('auth/me')
   @UseGuards(JwtGuard)
   async me(@Req() req: { actor: ActorContext }) {
-    const membership = await this.users.requireMembership(req.actor.userId);
+    const actor = req.actor;
+    if (actor.isSuperAdmin) {
+      const role = actor.roleId
+        ? await this.users.getRolePermissions(actor.roleId)
+        : [];
+      return { ...actor, permissions: role };
+    }
+    const membership = await this.users.requireMembership(actor.userId);
     const permissions = await this.users.getRolePermissions(membership.roleId);
-    return { ...req.actor, permissions };
+    return { ...actor, permissions };
   }
 }

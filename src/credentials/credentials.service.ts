@@ -6,6 +6,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { CredentialModel, toCredentialModel } from './credential.model.ts';
 import { Application } from '../applications/entities/application.entity.ts';
 import { CredentialEnvironment } from './entities/api-credential.entity.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 import { IssueCredentialDto } from './dto/issue-credential.dto.ts';
 
 export interface VerifiedCredential {
@@ -75,7 +76,7 @@ export class CredentialsService {
   }
 
   async issueForActor(
-    actor: { organizationId: string; isSuperAdmin: boolean },
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
     dto: IssueCredentialDto,
   ) {
     const app = await this.repo.manager.findOne(Application, {
@@ -94,17 +95,21 @@ export class CredentialsService {
   }
 
   async findAllForActor(
-    actor: { isSuperAdmin: boolean },
-    scopedOrgId: string,
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    filter: FilterDto,
   ): Promise<CredentialModel[]> {
     const rows = await this.repo.find({
       relations: { application: { organization: true } },
       order: { createdAt: 'ASC' },
     });
 
-    const filtered = actor.isSuperAdmin
-      ? rows
-      : rows.filter((r) => r.application?.organization?.id === scopedOrgId);
+    const organizationId = actor.isSuperAdmin
+      ? filter.organizationId ?? null
+      : actor.organizationId;
+
+    const filtered = organizationId
+      ? rows.filter((r) => r.application?.organization?.id === organizationId)
+      : rows;
 
     return filtered.map((row) => toCredentialModel(row));
   }

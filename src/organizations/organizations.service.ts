@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization } from './entities/organization.entity.ts';
 import { Application } from '../applications/entities/application.entity.ts';
+import { FilterDto } from '../common/dto/filter.dto.ts';
 
 @Injectable()
 export class OrganizationsService {
@@ -89,13 +90,20 @@ export class OrganizationsService {
     return org;
   }
 
-  async findAllForActor(actor: { isSuperAdmin: boolean }, scopedOrgId: string) {
-    if (actor.isSuperAdmin) {
-      return this.repo.find({ order: { createdAt: 'ASC' } });
+  async findAllForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    filter: FilterDto,
+  ) {
+    if (!actor.isSuperAdmin) {
+      if (!actor.organizationId) return [];
+      return this.repo.find({
+        where: { id: actor.organizationId },
+        order: { createdAt: 'ASC' },
+      });
     }
 
     return this.repo.find({
-      where: { id: scopedOrgId },
+      where: filter.organizationId ? { id: filter.organizationId } : {},
       order: { createdAt: 'ASC' },
     });
   }

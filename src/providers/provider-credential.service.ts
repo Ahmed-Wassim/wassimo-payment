@@ -11,7 +11,7 @@ import { decryptPayload, encryptPayload } from './crypto.ts';
 const UNIQUE_VIOLATION = '23505';
 
 type CredentialActor = {
-  organizationId: string;
+  organizationId: string | null;
   isSuperAdmin: boolean;
 };
 
