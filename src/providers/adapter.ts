@@ -12,16 +12,7 @@ export class ProviderConfigError extends Error {
   }
 }
 
-export interface CheckoutCustomer {
-  name?: string;
-  email?: string;
-  phone?: string;
-  street?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  zip?: string;
-}
+export type CheckoutCustomer = CustomerDetails;
 
 export interface CheckoutInput {
   paymentId: string;
@@ -49,6 +40,7 @@ export interface ProviderEvent {
   raw: unknown;
 }
 
+import type { CustomerDetails } from '../customers/customer-details.ts';
 import type { ProviderCode } from './provider-code.ts';
 
 export interface AdapterCapabilities {

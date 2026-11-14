@@ -16,6 +16,7 @@ import { transition } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
 import { isUuid } from '../common/is-uuid.ts';
 import { CustomersService } from '../customers/customers.service.ts';
+import { toCustomerDetails } from '../customers/customer-details.ts';
 
 @Injectable()
 export class ChargeService {
@@ -123,18 +124,7 @@ export class ChargeService {
         currency: payment.currency,
         method: payment.method,
         accountConfig: (account.config ?? {}) as Record<string, unknown>,
-        customerDetails: customer
-          ? {
-              name: customer.name ?? undefined,
-              email: customer.email ?? undefined,
-              phone: customer.phone ?? undefined,
-              street: customer.street ?? undefined,
-              city: customer.city ?? undefined,
-              state: customer.state ?? undefined,
-              country: customer.country ?? undefined,
-              zip: customer.zip ?? undefined,
-            }
-          : null,
+        customerDetails: customer ? toCustomerDetails(customer) : null,
       });
       providerReference = result.providerReference;
       redirectUrl = result.redirectUrl;
