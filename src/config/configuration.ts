@@ -1,5 +1,7 @@
 import { validateEnv } from './env.validation.ts';
 
+export const ENTITY_GLOB = 'dist/**/*.entity.js';
+
 export interface AppConfig {
   app: { port: number; env: 'dev' | 'prod'; url: string };
   db: { url: string };

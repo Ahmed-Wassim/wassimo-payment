@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
-import { loadConfig } from '../config/configuration.ts';
+import { ENTITY_GLOB, loadConfig } from '../config/configuration.ts';
 config();
 
 export const AppDataSource = new DataSource({
@@ -9,7 +9,7 @@ export const AppDataSource = new DataSource({
   url: loadConfig().db.url,
   synchronize: false,
   logging: ['error'],
-  entities: ['dist/**/*.entity.js'],
+  entities: [ENTITY_GLOB],
   uuidExtension: 'pgcrypto',
   migrations: ['src/database/migrations/*.ts'],
 });
