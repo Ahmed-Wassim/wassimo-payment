@@ -43,15 +43,8 @@ export interface ProviderEvent {
 import type { CustomerDetails } from '../customers/customer-details.ts';
 import type { ProviderCode } from './provider-code.ts';
 
-export interface AdapterCapabilities {
-  methods: string[];
-  operations: string[];
-  environments: string[];
-}
-
 export interface ProviderAdapter {
   readonly providerCode: ProviderCode;
-  capabilities(): AdapterCapabilities;
   createCheckout(input: CheckoutInput): Promise<CheckoutResult>;
   queryStatus(providerReference: string): Promise<Outcome>;
   verifyWebhook(

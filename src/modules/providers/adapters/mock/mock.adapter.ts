@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import {
-  AdapterCapabilities,
   CheckoutInput,
   CheckoutResult,
   Outcome,
@@ -16,14 +15,6 @@ export class MockAdapter implements ProviderAdapter {
   readonly providerCode = PROVIDER_CODE.Mock;
 
   constructor(private readonly hosted: MockHostedService) {}
-
-  capabilities(): AdapterCapabilities {
-    return {
-      methods: ['card'],
-      operations: ['charge'],
-      environments: ['test'],
-    };
-  }
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
     const webhookSecret =

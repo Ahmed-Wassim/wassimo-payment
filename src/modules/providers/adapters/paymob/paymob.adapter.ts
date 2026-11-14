@@ -3,7 +3,6 @@ import { Repository } from 'typeorm';
 import { PaymentAttempt } from '../../../payments/entities/payment-attempt.entity.ts';
 import { ProviderAccount } from '../../entities/provider-account.entity.ts';
 import {
-  AdapterCapabilities,
   CheckoutInput,
   CheckoutResult,
   Outcome,
@@ -23,10 +22,6 @@ export class PaymobAdapter implements ProviderAdapter {
     private readonly accounts: Repository<ProviderAccount>,
     private readonly bound: { account: ProviderAccount; credentials: Record<string, string> } | null,
   ) {}
-
-  capabilities(): AdapterCapabilities {
-    return { methods: ['card'], operations: ['charge'], environments: ['test'] };
-  }
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
     if (!this.bound) throw new ProviderConfigError('paymob: not bound');
