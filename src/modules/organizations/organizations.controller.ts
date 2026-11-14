@@ -18,7 +18,7 @@ import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { Permission } from '../auth/permission.decorator.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
-import { toOrganizationModel } from './organization.model.ts';
+import { toOrganizationModel } from './mappers/organization.mapper.ts';
 
 @Controller('organizations')
 export class OrganizationsController {

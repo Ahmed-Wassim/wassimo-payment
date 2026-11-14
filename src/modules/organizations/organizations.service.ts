@@ -9,7 +9,7 @@ import { Repository } from 'typeorm';
 import { Organization } from './entities/organization.entity.ts';
 import { Application } from '../applications/entities/application.entity.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
-import { toOrganizationModel } from './organization.model.ts';
+import { toOrganizationModel } from './mappers/organization.mapper.ts';
 import { isUuid } from '../../common/is-uuid.ts';
 
 @Injectable()

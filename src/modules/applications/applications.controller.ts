@@ -15,7 +15,7 @@ import { ApplicationsService } from './applications.service.ts';
 import { CreateApplicationDto } from './dto/create-application.dto.ts';
 import { UpdateApplicationDto } from './dto/update-application.dto.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
-import { toApplicationModel } from './application.model.ts';
+import { toApplicationModel } from './mappers/application.mapper.ts';
 import { JwtGuard, ActorContext } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { Permission } from '../auth/permission.decorator.ts';

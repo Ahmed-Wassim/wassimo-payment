@@ -1,4 +1,4 @@
-import { Organization } from './entities/organization.entity.ts';
+import { Organization } from '../entities/organization.entity.ts';
 
 export class OrganizationModel {
   id!: string;

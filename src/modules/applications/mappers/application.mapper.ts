@@ -1,5 +1,5 @@
-import { Application } from './entities/application.entity.ts';
-import { toOrganizationModel, OrganizationModel } from '../organizations/organization.model.ts';
+import { Application } from '../entities/application.entity.ts';
+import { toOrganizationModel, OrganizationModel } from '../../organizations/mappers/organization.mapper.ts';
 
 export class ApplicationModel {
   id!: string;

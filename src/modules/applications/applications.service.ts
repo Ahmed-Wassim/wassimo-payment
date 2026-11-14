@@ -10,7 +10,7 @@ import { Repository } from 'typeorm';
 import { Organization } from '../organizations/entities/organization.entity.ts';
 import { UpdateApplicationDto } from './dto/update-application.dto.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
-import { toApplicationModel } from './application.model.ts';
+import { toApplicationModel } from './mappers/application.mapper.ts';
 import { isUuid } from '../../common/is-uuid.ts';
 import { ApiCredential } from '../credentials/entities/api-credential.entity.ts';
 
