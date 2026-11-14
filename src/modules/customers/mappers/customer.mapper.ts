@@ -1,4 +1,4 @@
-import { Customer } from './entities/customer.entity.ts';
+import { Customer } from '../entities/customer.entity.ts';
 
 export class CustomerModel {
   id!: string;

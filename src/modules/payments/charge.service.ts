@@ -16,7 +16,7 @@ import { transition } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
 import { isUuid } from '../../common/is-uuid.ts';
 import { CustomersService } from '../customers/customers.service.ts';
-import { toCustomerDetails } from '../customers/customer-details.ts';
+import { toCustomerDetails } from '../customers/mappers/customer-details.mapper.ts';
 
 @Injectable()
 export class ChargeService {

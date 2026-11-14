@@ -1,6 +1,6 @@
 import { Payment } from '../entities/payment.entity.ts';
 import { Customer } from '../../customers/entities/customer.entity.ts';
-import { toCustomerDetails } from '../../customers/customer-details.ts';
+import { toCustomerDetails } from '../../customers/mappers/customer-details.mapper.ts';
 import type { CustomerDetails } from '../../customers/customer-details.ts';
 import { PaymentStatus } from '../states.ts';
 
