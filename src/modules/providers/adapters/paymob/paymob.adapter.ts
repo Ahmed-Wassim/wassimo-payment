@@ -84,9 +84,15 @@ export class PaymobAdapter implements ProviderAdapter {
       body: JSON.stringify({ auth_token: token, order_id: providerReference }),
     })).json()) as any;
 
-    if (tx.success && !tx.pending) return { result: 'succeeded' };
-    if (!tx.success && !tx.pending) return { result: 'failed' };
-    return { result: 'unknown' };
+    const result = this.txResult(tx);
+    return { result: result === 'pending' ? 'unknown' : result };
+  }
+
+  private txResult(tx: any): 'succeeded' | 'failed' | 'pending' | 'unknown' {
+    if (tx.success && !tx.pending) return 'succeeded';
+    if (!tx.success && !tx.pending) return 'failed';
+    if (tx.pending) return 'pending';
+    return 'unknown';
   }
 
   async verifyWebhook(
@@ -124,7 +130,7 @@ export class PaymobAdapter implements ProviderAdapter {
       return null;
     }
 
-    const result = tx.success && !tx.pending ? 'succeeded' : !tx.success && !tx.pending ? 'failed' : tx.pending ? 'pending' : 'unknown';
+    const result = this.txResult(tx);
     return { providerEventId: tx.id != null ? String(tx.id) : null, eventType: `transaction.${result}`, result, providerReference, raw: body };
   }
 
