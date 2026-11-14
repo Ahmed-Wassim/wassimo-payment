@@ -95,6 +95,17 @@ export class PaymobAdapter implements ProviderAdapter {
     return 'unknown';
   }
 
+  private hmacData(tx: any): string {
+    const s = tx.source_data || {};
+    return [
+      tx.amount_cents, tx.created_at, tx.currency, tx.error_occured,
+      tx.has_parent_transaction, tx.id, tx.integration_id, tx.is_3d_secure,
+      tx.is_auth, tx.is_capture, tx.is_refunded, tx.is_standalone_payment,
+      tx.is_voided, tx.order.id, tx.owner, tx.pending,
+      s.pan, s.sub_type, s.type, tx.success,
+    ].map((v) => (v === true ? 'true' : v === false ? 'false' : v == null ? '' : String(v))).join('');
+  }
+
   async verifyWebhook(
     _headers: Record<string, string>,
     rawBody: Buffer,
@@ -114,16 +125,7 @@ export class PaymobAdapter implements ProviderAdapter {
     const creds = await this.credentialsService.load(attempt.providerAccountId).catch(() => null);
     if (!creds?.hmac_secret) return null;
 
-    const s = tx.source_data || {};
-    const data = [
-      tx.amount_cents, tx.created_at, tx.currency, tx.error_occured,
-      tx.has_parent_transaction, tx.id, tx.integration_id, tx.is_3d_secure,
-      tx.is_auth, tx.is_capture, tx.is_refunded, tx.is_standalone_payment,
-      tx.is_voided, tx.order.id, tx.owner, tx.pending,
-      s.pan, s.sub_type, s.type, tx.success,
-    ].map((v) => (v === true ? 'true' : v === false ? 'false' : v == null ? '' : String(v))).join('');
-
-    const expected = createHmac('sha512', creds.hmac_secret).update(data).digest('hex');
+    const expected = createHmac('sha512', creds.hmac_secret).update(this.hmacData(tx)).digest('hex');
     try {
       if (!timingSafeEqual(Buffer.from(expected), Buffer.from(hmac))) return null;
     } catch {
