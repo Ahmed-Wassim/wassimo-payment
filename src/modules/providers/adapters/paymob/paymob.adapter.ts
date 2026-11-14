@@ -48,10 +48,9 @@ export class PaymobAdapter implements ProviderAdapter {
     const data = (await res.json()) as any;
     if (!res.ok) throw new ProviderConfigError(`paymob intention: ${res.status}`);
 
-    const checkoutBase = String(config.checkout_base_url || 'https://eg.checkout.paymob.com/').replace(/\/?$/, '/');
     return {
       providerReference: String(data.intention_order_id),
-      redirectUrl: `${checkoutBase}?publicKey=${encodeURIComponent(creds.public_key)}&clientSecret=${encodeURIComponent(data.client_secret)}`,
+      redirectUrl: this.checkoutUrl(config, creds.public_key, data.client_secret),
     };
   }
 
@@ -98,6 +97,11 @@ export class PaymobAdapter implements ProviderAdapter {
       state: customer.state || 'NA',
       country: String(customer.country || 'NA').toUpperCase(),
     };
+  }
+
+  private checkoutUrl(config: any, publicKey: string, clientSecret: string): string {
+    const base = String(config.checkout_base_url || 'https://eg.checkout.paymob.com/').replace(/\/?$/, '/');
+    return `${base}?publicKey=${encodeURIComponent(publicKey)}&clientSecret=${encodeURIComponent(clientSecret)}`;
   }
 
   private async authToken(base: string, apiKey: string): Promise<string> {
