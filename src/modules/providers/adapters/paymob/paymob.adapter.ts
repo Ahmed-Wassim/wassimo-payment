@@ -106,6 +106,15 @@ export class PaymobAdapter implements ProviderAdapter {
     ].map((v) => (v === true ? 'true' : v === false ? 'false' : v == null ? '' : String(v))).join('');
   }
 
+  private validHmac(tx: any, secret: string, received: string): boolean {
+    const expected = createHmac('sha512', secret).update(this.hmacData(tx)).digest('hex');
+    try {
+      return timingSafeEqual(Buffer.from(expected), Buffer.from(received));
+    } catch {
+      return false;
+    }
+  }
+
   async verifyWebhook(
     _headers: Record<string, string>,
     rawBody: Buffer,
@@ -125,12 +134,7 @@ export class PaymobAdapter implements ProviderAdapter {
     const creds = await this.credentialsService.load(attempt.providerAccountId).catch(() => null);
     if (!creds?.hmac_secret) return null;
 
-    const expected = createHmac('sha512', creds.hmac_secret).update(this.hmacData(tx)).digest('hex');
-    try {
-      if (!timingSafeEqual(Buffer.from(expected), Buffer.from(hmac))) return null;
-    } catch {
-      return null;
-    }
+    if (!this.validHmac(tx, creds.hmac_secret, hmac)) return null;
 
     const result = this.txResult(tx);
     return { providerEventId: tx.id != null ? String(tx.id) : null, eventType: `transaction.${result}`, result, providerReference, raw: body };
