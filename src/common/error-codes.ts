@@ -15,6 +15,7 @@ export const ERROR_CODES = [
   'encryption_key_missing',
   'provider_credentials_missing',
   'provider_method_unsupported',
+  'unspecified_error',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
