@@ -3,20 +3,20 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { HealthController } from './health/health.controller.ts';
 import { APP_CONFIG, AppConfigModule } from './config/config.module.ts';
 import type { AppConfig } from './config/configuration.ts';
-import { OrganizationsModule } from './organizations/organizations.module.ts';
-import { CurrenciesModule } from './currencies/currencies.module.ts';
-import { ApplicationsModule } from './applications/applications.module.ts';
-import { CredentialsModule } from './credentials/credentials.module.ts';
-import { AuthModule } from './auth/auth.module.ts';
-import { ProvidersModule } from './providers/providers.module.ts';
-import { UsersModule } from './users/users.module.ts';
-import { OptionsModule } from './options/options.module.ts';
-import { PermissionsModule } from './permissions/permissions.module.ts';
+import { OrganizationsModule } from './modules/organizations/organizations.module.ts';
+import { CurrenciesModule } from './modules/currencies/currencies.module.ts';
+import { ApplicationsModule } from './modules/applications/applications.module.ts';
+import { CredentialsModule } from './modules/credentials/credentials.module.ts';
+import { AuthModule } from './modules/auth/auth.module.ts';
+import { ProvidersModule } from './modules/providers/providers.module.ts';
+import { UsersModule } from './modules/users/users.module.ts';
+import { OptionsModule } from './modules/options/options.module.ts';
+import { PermissionsModule } from './modules/permissions/permissions.module.ts';
 import { CommonModule } from './common/common.module.ts';
-import { PaymentsModule } from './payments/payments.module.ts';
-import { IdempotencyModule } from './idempotency/idempotency.module.ts';
-import { WebhooksModule } from './webhooks/webhooks.module.ts';
-import { CustomersModule } from './customers/customers.module.ts';
+import { PaymentsModule } from './modules/payments/payments.module.ts';
+import { IdempotencyModule } from './modules/idempotency/idempotency.module.ts';
+import { WebhooksModule } from './modules/webhooks/webhooks.module.ts';
+import { CustomersModule } from './modules/customers/customers.module.ts';
 
 @Module({
   imports: [
