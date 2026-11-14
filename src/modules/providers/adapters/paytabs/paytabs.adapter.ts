@@ -73,15 +73,8 @@ export class PaytabsAdapter implements ProviderAdapter {
     rawBody: Buffer,
     _query: Record<string, string | string[] | undefined>,
   ): Promise<ProviderEvent | null> {
-    const contentType = headers['content-type'] || '';
-    let parsed: any;
-    try {
-      parsed = contentType.includes('application/x-www-form-urlencoded')
-        ? Object.fromEntries(new URLSearchParams(rawBody.toString('utf8')))
-        : JSON.parse(rawBody.toString('utf8'));
-    } catch {
-      return null;
-    }
+    const parsed = this.parseWebhookBody(headers, rawBody);
+    if (!parsed) return null;
 
     const tranRef = parsed.tran_ref || parsed.tranRef;
     if (!tranRef) return null;
@@ -119,6 +112,17 @@ export class PaytabsAdapter implements ProviderAdapter {
     if (status === 'A') return { result: 'succeeded' };
     if (status === 'D' || status === 'C') return { result: 'failed' };
     return { result: 'unknown' };
+  }
+
+  private parseWebhookBody(headers: Record<string, string>, rawBody: Buffer): any | null {
+    const contentType = headers['content-type'] || '';
+    try {
+      return contentType.includes('application/x-www-form-urlencoded')
+        ? Object.fromEntries(new URLSearchParams(rawBody.toString('utf8')))
+        : JSON.parse(rawBody.toString('utf8'));
+    } catch {
+      return null;
+    }
   }
 
   private async post(baseUrl: string, path: string, serverKey: string, body: any): Promise<any> {
