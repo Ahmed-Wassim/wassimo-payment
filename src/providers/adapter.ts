@@ -12,12 +12,24 @@ export class ProviderConfigError extends Error {
   }
 }
 
+export interface CheckoutCustomer {
+  name?: string;
+  email?: string;
+  phone?: string;
+  street?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zip?: string;
+}
+
 export interface CheckoutInput {
   paymentId: string;
   amountMinor: bigint;
   currency: string;
   method: string;
   accountConfig?: Record<string, unknown>;
+  customerDetails?: CheckoutCustomer | null;
 }
 
 export interface CheckoutResult {

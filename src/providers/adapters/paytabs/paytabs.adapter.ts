@@ -4,6 +4,7 @@ import { CurrenciesService } from '../../../currencies/currencies.service.ts';
 import { PaymentAttempt } from '../../../payments/entities/payment-attempt.entity.ts';
 import {
   AdapterCapabilities,
+  CheckoutCustomer,
   CheckoutInput,
   CheckoutResult,
   Outcome,
@@ -58,6 +59,9 @@ export class PaytabsAdapter implements ProviderAdapter {
       payment_methods: [input.method],
       callback: callbackUrl,
       return: returnUrl,
+      ...(input.customerDetails
+        ? { customer_details: this.customerDetails(input.customerDetails) }
+        : {}),
     };
 
     const data = await this.post(baseUrl, '/payment/request', serverKey, body, config);
@@ -252,6 +256,19 @@ export class PaytabsAdapter implements ProviderAdapter {
       throw new ProviderConfigError(`paytabs missing credential: ${key}`);
     }
     return value;
+  }
+
+  private customerDetails(customer: CheckoutCustomer): Record<string, string> {
+    const details: Record<string, string> = {};
+    if (customer.name) details.name = customer.name;
+    if (customer.email) details.email = customer.email;
+    if (customer.phone) details.phone = customer.phone;
+    if (customer.street) details.street1 = customer.street;
+    if (customer.city) details.city = customer.city;
+    if (customer.state) details.state = customer.state;
+    if (customer.country) details.country = customer.country.toUpperCase();
+    if (customer.zip) details.zip = customer.zip;
+    return details;
   }
 
   private baseUrl(config: Record<string, unknown>): string {

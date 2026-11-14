@@ -15,6 +15,7 @@ import { Payment } from './entities/payment.entity.ts';
 import { transition } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
 import { isUuid } from './uuid.ts';
+import { CustomersService } from '../customers/customers.service.ts';
 
 @Injectable()
 export class ChargeService {
@@ -24,6 +25,7 @@ export class ChargeService {
     private readonly payments: PaymentsService,
     private readonly providers: ProvidersService,
     private readonly factory: PaymentProviderFactory,
+    private readonly customers: CustomersService,
   ) {}
 
   async charge(
@@ -96,6 +98,7 @@ export class ChargeService {
     }
 
     const adapter = await this.factory.forAccount(account);
+    const customer = await this.customers.forPayment(payment.id);
 
     const attempt = await this.attempts.manager.transaction(async (tx) =>
       tx.save(PaymentAttempt, {
@@ -120,6 +123,18 @@ export class ChargeService {
         currency: payment.currency,
         method: payment.method,
         accountConfig: (account.config ?? {}) as Record<string, unknown>,
+        customerDetails: customer
+          ? {
+              name: customer.name ?? undefined,
+              email: customer.email ?? undefined,
+              phone: customer.phone ?? undefined,
+              street: customer.street ?? undefined,
+              city: customer.city ?? undefined,
+              state: customer.state ?? undefined,
+              country: customer.country ?? undefined,
+              zip: customer.zip ?? undefined,
+            }
+          : null,
       });
       providerReference = result.providerReference;
       redirectUrl = result.redirectUrl;

@@ -57,7 +57,7 @@ export class PaymentsController {
     if (!payment) {
       throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'payment not found');
     }
-    return toPaymentModel(payment);
+    return toPaymentModel(payment, await this.payments.customerFor(id));
   }
 
   @Get('v1/payments/:id')
@@ -75,7 +75,7 @@ export class PaymentsController {
       throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'payment not found');
     }
 
-    return toPaymentModel(payment);
+    return toPaymentModel(payment, await this.payments.customerFor(id));
   }
 
   @Post('v1/payments/:id/charge')
@@ -92,6 +92,6 @@ export class PaymentsController {
     @Param('id') id: string,
   ) {
     const payment = await this.resolution.resolve(req.auth!, id);
-    return toPaymentModel(payment);
+    return toPaymentModel(payment, await this.payments.customerFor(id));
   }
 }

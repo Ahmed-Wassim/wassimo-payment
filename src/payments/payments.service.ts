@@ -7,6 +7,7 @@ import { CurrenciesService } from '../currencies/currencies.service.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
 import { Payment } from './entities/payment.entity.ts';
+import { CustomersService } from '../customers/customers.service.ts';
 
 @Injectable()
 export class PaymentsService {
@@ -14,6 +15,7 @@ export class PaymentsService {
     @InjectRepository(Payment) private readonly repo: Repository<Payment>,
     private readonly currencies: CurrenciesService,
     private readonly providers: ProvidersService,
+    private readonly customers: CustomersService,
   ) {}
 
   async createInTx(
@@ -60,6 +62,9 @@ export class PaymentsService {
         capturedMinor: '0',
         refundedConfirmedMinor: '0',
       });
+      if (dto.customer_details) {
+        await this.customers.snapshotInTx(em, payment.id, dto.customer_details);
+      }
       return payment;
     } catch (e) {
       if ((e as { code?: string })?.code === '23505') {
@@ -71,5 +76,9 @@ export class PaymentsService {
 
   async loadById(id: string): Promise<Payment | null> {
     return this.repo.findOne({ where: { id } });
+  }
+
+  async customerFor(paymentId: string) {
+    return this.customers.forPayment(paymentId);
   }
 }

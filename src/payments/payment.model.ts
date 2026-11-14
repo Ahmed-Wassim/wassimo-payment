@@ -1,4 +1,5 @@
 import { Payment } from './entities/payment.entity.ts';
+import { Customer } from '../customers/entities/customer.entity.ts';
 import { PaymentStatus } from './states.ts';
 
 export type PaymentStatusDetail =
@@ -18,6 +19,16 @@ export interface PaymentPublicModel {
   captured_minor: number;
   refunded_confirmed_minor: number;
   method: string | null;
+  customer_details: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zip?: string;
+  } | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,8 +41,20 @@ const STATUS_DETAIL: Record<PaymentStatus, PaymentStatusDetail> = {
   expired: 'abandoned and never charged; create a NEW payment',
 };
 
-export function toPaymentModel(p: Payment): PaymentPublicModel {
+export function toPaymentModel(p: Payment, customer?: Customer | null): PaymentPublicModel {
   return {
+    customer_details: customer
+      ? {
+          name: customer.name ?? undefined,
+          email: customer.email ?? undefined,
+          phone: customer.phone ?? undefined,
+          street: customer.street ?? undefined,
+          city: customer.city ?? undefined,
+          state: customer.state ?? undefined,
+          country: customer.country ?? undefined,
+          zip: customer.zip ?? undefined,
+        }
+      : null,
     id: p.id,
     reference: p.reference,
     amount_minor: Number(p.amountMinor),

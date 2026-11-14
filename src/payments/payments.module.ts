@@ -5,6 +5,7 @@ import { CredentialsModule } from '../credentials/credentials.module.ts';
 import { CurrenciesModule } from '../currencies/currencies.module.ts';
 import { ProvidersModule } from '../providers/providers.module.ts';
 import { IdempotencyModule } from '../idempotency/idempotency.module.ts';
+import { CustomersModule } from '../customers/customers.module.ts';
 import { Payment } from './entities/payment.entity.ts';
 import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { ChargeService } from './charge.service.ts';
@@ -21,6 +22,7 @@ import { ReturnController } from './return.controller.ts';
     CurrenciesModule,
     ProvidersModule,
     IdempotencyModule,
+    CustomersModule,
   ],
   controllers: [PaymentsController, ReturnController],
   providers: [PaymentsService, ChargeService, ResolutionService],
