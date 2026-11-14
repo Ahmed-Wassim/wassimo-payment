@@ -18,7 +18,7 @@ import { ResolutionService } from './resolution.service.ts';
 import { PaymentsService } from './payments.service.ts';
 import { toPaymentModel } from './payment.model.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
-import { isUuid } from './uuid.ts';
+import { isUuid } from '../common/is-uuid.ts';
 
 @Controller()
 @UseGuards(ApiKeyGuard)

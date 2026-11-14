@@ -5,7 +5,6 @@ import {
   IsString,
   IsUUID,
   Matches,
-  Max,
   MaxLength,
 } from 'class-validator';
 

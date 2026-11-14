@@ -10,7 +10,7 @@ import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { Payment } from './entities/payment.entity.ts';
 import { transition } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
-import { isUuid } from './uuid.ts';
+import { isUuid } from '../common/is-uuid.ts';
 
 @Injectable()
 export class ResolutionService {

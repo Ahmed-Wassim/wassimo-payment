@@ -1,4 +1,3 @@
-import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CurrenciesService } from '../../../currencies/currencies.service.ts';
 import { PaymentAttempt } from '../../../payments/entities/payment-attempt.entity.ts';
@@ -223,7 +222,7 @@ export class PaytabsAdapter implements ProviderAdapter {
 
   private isConfigFault(payload: Record<string, unknown>): boolean {
     const code = String(payload.code ?? payload.response_code ?? '');
-    return /^4/.test(code) || code === '1' || code === '401' || code === '400';
+    return code.startsWith('4') || code === '1' || code === '401' || code === '400';
   }
 
   private describe(payload: Record<string, unknown>): string {
