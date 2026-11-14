@@ -150,7 +150,8 @@ export class PaymobAdapter implements ProviderAdapter {
       throw new ProviderConfigError(`paymob query: inquiry HTTP ${inquiryRes.status}`);
     }
 
-    return { result: this.mapResult(inquiry) };
+    const result = this.mapResult(inquiry);
+    return { result: result === 'pending' ? 'unknown' : result };
   }
 
   async verifyWebhook(
