@@ -13,6 +13,7 @@ import { Permission } from './entities/permission.entity.ts';
 import { RolePermission } from './entities/role-permission.entity.ts';
 import { FilterDto } from '../common/dto/filter.dto.ts';
 import { toPermissionModel } from './permission.model.ts';
+import { isUuid } from '../common/is-uuid.ts';
 
 @Injectable()
 export class UsersService {
@@ -39,6 +40,9 @@ export class UsersService {
   }
 
   async findById(id: string): Promise<User> {
+    if (!isUuid(id)) {
+      throw new BadRequestException('malformed user id');
+    }
     const row = await this.users.findOne({ where: { id } });
     if (!row) throw new NotFoundException(`User not found ${id}`);
     return row;
@@ -62,6 +66,9 @@ export class UsersService {
   }
 
   async findRoleById(id: string): Promise<Role> {
+    if (!isUuid(id)) {
+      throw new BadRequestException('malformed role id');
+    }
     const row = await this.roles.findOne({ where: { id } });
     if (!row) throw new NotFoundException(`Role not found ${id}`);
     return row;
@@ -267,6 +274,9 @@ export class UsersService {
     userId: string,
     dto: { roleId?: string; status?: 'active' | 'disabled' },
   ): Promise<{ id: string; roleId: string; status: string }> {
+    if (!isUuid(userId)) {
+      throw new BadRequestException('malformed user id');
+    }
     const membership = await this.memberships.findOne({ where: { userId } });
     if (!membership) {
       throw new NotFoundException(`Membership not found for user ${userId}`);

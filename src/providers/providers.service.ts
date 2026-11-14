@@ -10,6 +10,7 @@ import { ApiError } from '../common/api-error.ts';
 import { FilterDto } from '../common/dto/filter.dto.ts';
 import { ProviderAccount } from './entities/provider-account.entity.ts';
 import { toProviderModel } from './provider.model.ts';
+import { isUuid } from '../common/is-uuid.ts';
 import { Provider, ProviderMethod } from './entities/provider.entity.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
 import { UpdateProviderAccountDto } from './dto/update-provider-account.dto.ts';
@@ -76,6 +77,9 @@ export class ProvidersService {
   }
 
   async requireById(id: string): Promise<ProviderAccount> {
+    if (!isUuid(id)) {
+      throw new BadRequestException('malformed provider account id');
+    }
     const row = await this.accounts.findOne({ where: { id } });
     if (!row) throw new NotFoundException(`Provider account not found ${id}`);
     return row;
@@ -85,6 +89,9 @@ export class ProvidersService {
     actor: { organizationId: string | null; isSuperAdmin: boolean },
     id: string,
   ): Promise<ProviderAccount> {
+    if (!isUuid(id)) {
+      throw new BadRequestException('malformed provider account id');
+    }
     const row = await this.accounts.findOne({ where: { id } });
     if (!row || (!actor.isSuperAdmin && row.organizationId !== actor.organizationId)) {
       throw new NotFoundException(`Provider account not found ${id}`);

@@ -11,6 +11,7 @@ import { Organization } from '../organizations/entities/organization.entity.ts';
 import { UpdateApplicationDto } from './dto/update-application.dto.ts';
 import { FilterDto } from '../common/dto/filter.dto.ts';
 import { toApplicationModel } from './application.model.ts';
+import { isUuid } from '../common/is-uuid.ts';
 import { ApiCredential } from '../credentials/entities/api-credential.entity.ts';
 
 @Injectable()
@@ -48,6 +49,9 @@ export class ApplicationsService {
   }
 
   async requireById(id: string): Promise<Application> {
+    if (!isUuid(id)) {
+      throw new BadRequestException('malformed application id');
+    }
     const app = await this.repo.findOne({
       where: { id },
       relations: { organization: true },
@@ -60,6 +64,9 @@ export class ApplicationsService {
     actor: { organizationId: string | null; isSuperAdmin: boolean },
     id: string,
   ): Promise<Application> {
+    if (!isUuid(id)) {
+      throw new BadRequestException('malformed application id');
+    }
     const app = await this.repo.findOne({
       where: { id },
       relations: { organization: true },

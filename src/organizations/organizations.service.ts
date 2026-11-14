@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -9,6 +10,7 @@ import { Organization } from './entities/organization.entity.ts';
 import { Application } from '../applications/entities/application.entity.ts';
 import { FilterDto } from '../common/dto/filter.dto.ts';
 import { toOrganizationModel, OrganizationModel } from './organization.model.ts';
+import { isUuid } from '../common/is-uuid.ts';
 
 @Injectable()
 export class OrganizationsService {
@@ -42,6 +44,9 @@ export class OrganizationsService {
   }
 
   async findById(id: string): Promise<Organization | null> {
+    if (!isUuid(id)) {
+      throw new BadRequestException('malformed organization id');
+    }
     return this.repo.findOne({ where: { id } });
   }
 
