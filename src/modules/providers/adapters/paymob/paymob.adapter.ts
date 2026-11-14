@@ -125,8 +125,32 @@ export class PaymobAdapter implements ProviderAdapter {
     return { providerReference: String(orderId), redirectUrl };
   }
 
-  async queryStatus(_providerReference: string): Promise<Outcome> {
-    return { result: 'unknown' };
+  async queryStatus(providerReference: string): Promise<Outcome> {
+    const { config, credentials } = await this.resolveContext(providerReference);
+    const baseUrl = this.stringConfig(config, 'base_url', 'https://accept.paymob.com').replace(/\/$/, '');
+    const apiKey = this.requireCredential(credentials, 'api_key');
+
+    const tokenRes = await fetch(`${baseUrl}/api/auth/tokens`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey }),
+    });
+    const tokenData = (await tokenRes.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!tokenRes.ok || typeof tokenData.token !== 'string') {
+      throw new ProviderConfigError('paymob query: failed to obtain auth token');
+    }
+
+    const inquiryRes = await fetch(`${baseUrl}/api/ecommerce/orders/transaction_inquiry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ auth_token: tokenData.token, order_id: providerReference }),
+    });
+    const inquiry = (await inquiryRes.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!inquiryRes.ok) {
+      throw new ProviderConfigError(`paymob query: inquiry HTTP ${inquiryRes.status}`);
+    }
+
+    return { result: this.mapResult(inquiry) };
   }
 
   async verifyWebhook(
@@ -278,5 +302,27 @@ export class PaymobAdapter implements ProviderAdapter {
     if (!success && !pending) return 'failed';
     if (pending) return 'pending';
     return 'unknown';
+  }
+
+  private async resolveContext(providerReference: string): Promise<{
+    config: Record<string, unknown>;
+    credentials: Record<string, string>;
+  }> {
+    if (this.bound) {
+      return {
+        config: (this.bound.account.config ?? {}) as Record<string, unknown>,
+        credentials: this.bound.credentials,
+      };
+    }
+    const attempt = await this.attempts.findOne({ where: { providerReference } });
+    if (!attempt) {
+      throw new ProviderConfigError('paymob query: unknown provider reference');
+    }
+    const account = await this.accounts.findOne({ where: { id: attempt.providerAccountId } });
+    if (!account) {
+      throw new ProviderConfigError('paymob query: missing provider account');
+    }
+    const credentials = await this.credentialsService.load(account.id);
+    return { config: (account.config ?? {}) as Record<string, unknown>, credentials };
   }
 }
