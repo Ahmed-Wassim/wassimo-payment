@@ -56,6 +56,7 @@ export class WebhooksController {
       }
     }
 
-    return this.webhooks.ingest(providerCode.trim().toLowerCase(), headers, req.rawBody);
+    const query = (req as RawWebhookRequest & { query?: Record<string, string | string[] | undefined> }).query ?? {};
+    return this.webhooks.ingest(providerCode.trim().toLowerCase(), headers, req.rawBody, query);
   }
 }

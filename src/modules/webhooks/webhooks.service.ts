@@ -23,10 +23,11 @@ export class WebhooksService {
     providerCode: string,
     headers: Record<string, string>,
     rawBody: Buffer,
+    query: Record<string, string | string[] | undefined>,
   ): Promise<{ status: string }> {
     const adapter = await this.factory.forProviderCode(providerCode);
 
-    const event = await adapter.verifyWebhook(headers, rawBody);
+    const event = await adapter.verifyWebhook(headers, rawBody, query);
     if (!event) {
       throw new ApiError(
         'unauthorized',

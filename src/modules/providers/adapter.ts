@@ -57,5 +57,6 @@ export interface ProviderAdapter {
   verifyWebhook(
     headers: Record<string, string>,
     rawBody: Buffer,
+    query: Record<string, string | string[] | undefined>,
   ): Promise<ProviderEvent | null>;
 }
