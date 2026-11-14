@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto';
+import { Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { PaymentAttempt } from '../../../payments/entities/payment-attempt.entity.ts';
 import { ProviderAccount } from '../../entities/provider-account.entity.ts';
