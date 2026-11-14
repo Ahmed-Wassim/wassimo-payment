@@ -11,5 +11,5 @@ export const AppDataSource = new DataSource({
   logging: ['error'],
   entities: ['dist/**/*.entity.js'],
   uuidExtension: 'pgcrypto',
-  migrations: ['src/db/migrations/*.ts'],
+  migrations: ['src/database/migrations/*.ts'],
 });
