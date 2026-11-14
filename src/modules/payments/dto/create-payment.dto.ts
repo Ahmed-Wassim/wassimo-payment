@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Length, Min, ValidateNested } from 'class-validator';
+import { IsDefined, IsInt, IsNotEmpty, IsString, IsUUID, Length, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CustomerDetailsDto } from './customer-details.dto.ts';
 
@@ -18,8 +18,8 @@ export class CreatePaymentDto {
   @IsString() @IsNotEmpty()
   method!: string;
 
-  @IsOptional()
+  @IsDefined()
   @ValidateNested()
   @Type(() => CustomerDetailsDto)
-  customer_details?: CustomerDetailsDto;
+  customer_details!: CustomerDetailsDto;
 }

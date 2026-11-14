@@ -25,11 +25,21 @@ export class MockHostedController {
       return;
     }
 
+    const customer = session.customer;
+    const customerHtml = customer
+      ? `<p>Customer: ${customer.name ?? ''} &lt;${customer.email ?? ''}&gt;</p>
+        ${customer.phone ? `<p>Phone: ${customer.phone}</p>` : ''}
+        ${customer.street || customer.city || customer.state || customer.country || customer.zip
+          ? `<p>Address: ${[customer.street, customer.city, customer.state, customer.zip, customer.country].filter(Boolean).join(', ')}</p>`
+          : ''}`
+      : '<p>Customer: (none provided)</p>';
+
     res.type('html').send(`<!doctype html>
       <html><body style="font-family:sans-serif;max-width:480px;margin:3rem auto">
         <h3>Mock Provider — hosted checkout</h3>
         <p>Amount: ${session.amountMinor.toString()} ${session.currency} (minor units)</p>
         <p>Method: ${session.method}</p>
+        ${customerHtml}
         <p>Session: ${session.sessionRef}</p>
         <form method="post" action="/mock/hosted/${session.sessionRef}/complete">
           <button name="outcome" value="approve" type="submit">Approve</button>

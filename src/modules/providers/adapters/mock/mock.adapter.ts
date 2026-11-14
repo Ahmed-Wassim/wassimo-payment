@@ -35,6 +35,7 @@ export class MockAdapter implements ProviderAdapter {
       input.amountMinor,
       input.currency,
       input.method,
+      input.customerDetails ?? null,
       webhookSecret,
     );
     return {

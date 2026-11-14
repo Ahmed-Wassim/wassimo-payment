@@ -1,12 +1,12 @@
-import { IsEmail, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 import type { CustomerDetails } from '../../customers/customer-details.ts';
 
 export class CustomerDetailsDto implements CustomerDetails {
-  @IsOptional() @IsString() @MaxLength(255)
-  name?: string;
+  @IsNotEmpty() @IsString() @MaxLength(255)
+  name!: string;
 
-  @IsOptional() @IsEmail()
-  email?: string;
+  @IsEmail()
+  email!: string;
 
   @IsOptional() @IsString() @MaxLength(32)
   phone?: string;

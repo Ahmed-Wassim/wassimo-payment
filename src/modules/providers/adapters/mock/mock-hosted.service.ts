@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { APP_CONFIG } from '../../../../config/config.module.ts';
 import type { AppConfig } from '../../../../config/configuration.ts';
+import type { CheckoutCustomer } from '../../adapter.ts';
 
 export type MockOutcome = 'pending' | 'succeeded' | 'failed';
 export type MockButton = 'approve' | 'decline' | 'approve-lost';
@@ -19,6 +20,7 @@ export interface MockSession {
   amountMinor: bigint;
   currency: string;
   method: string;
+  customer: CheckoutCustomer | null;
   outcome: MockOutcome;
   webhookDelivered: boolean;
   webhookSecret: string;
@@ -44,6 +46,7 @@ export class MockHostedService {
     amountMinor: bigint,
     currency: string,
     method: string,
+    customer: CheckoutCustomer | null,
     webhookSecret = this.secret,
   ): MockSession {
     const sessionRef = 'mock_' + randomBytes(6).toString('hex');
@@ -53,6 +56,7 @@ export class MockHostedService {
       amountMinor,
       currency,
       method,
+      customer,
       outcome: 'pending',
       webhookDelivered: false,
       webhookSecret,
