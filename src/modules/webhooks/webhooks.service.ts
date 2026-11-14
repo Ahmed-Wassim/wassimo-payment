@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiError } from '../../common/api-error.ts';
-import { PaymentProviderFactory } from '../providers/payment-provider.factory.ts';
+import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { attemptTransition } from '../payments/attempt-states.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { Payment } from '../payments/entities/payment.entity.ts';

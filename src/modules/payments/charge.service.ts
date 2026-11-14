@@ -7,7 +7,7 @@ import {
   ProviderConfigError,
   ProviderTimeoutError,
 } from '../providers/adapter.ts';
-import { PaymentProviderFactory } from '../providers/payment-provider.factory.ts';
+import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
 import { attemptTransition } from './attempt-states.ts';
 import { PaymentAttempt } from './entities/payment-attempt.entity.ts';

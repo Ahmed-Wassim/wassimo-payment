@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/api-error.ts';
-import { PaymentProviderFactory } from '../providers/payment-provider.factory.ts';
+import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
 import { attemptTransition } from './attempt-states.ts';
 import { PaymentAttempt } from './entities/payment-attempt.entity.ts';

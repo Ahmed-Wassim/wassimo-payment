@@ -10,7 +10,7 @@ import { MockHostedService } from './adapters/mock/mock-hosted.service.ts';
 import { ProviderAccount } from './entities/provider-account.entity.ts';
 import { ProviderCredential } from './entities/provider-credential.entity.ts';
 import { Provider } from './entities/provider.entity.ts';
-import { PaymentProviderFactory } from './payment-provider.factory.ts';
+import { PaymentProviderFactory } from './factories/payment-provider.factory.ts';
 import { ProviderMethodsSeeder } from './provider-methods.seeder.ts';
 import { ProviderCredentialService } from './provider-credential.service.ts';
 import { ProvidersController } from './providers.controller.ts';
