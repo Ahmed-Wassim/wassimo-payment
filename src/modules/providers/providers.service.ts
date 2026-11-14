@@ -9,7 +9,7 @@ import { Repository } from 'typeorm';
 import { ApiError } from '../../common/api-error.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { ProviderAccount } from './entities/provider-account.entity.ts';
-import { toProviderModel } from './provider.model.ts';
+import { toProviderModel } from './mappers/provider.mapper.ts';
 import { isUuid } from '../../common/is-uuid.ts';
 import { Provider, ProviderMethod } from './entities/provider.entity.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
@@ -19,7 +19,7 @@ import { Application } from '../applications/entities/application.entity.ts';
 import {
   ProviderAccountModel,
   toProviderAccountModel,
-} from './provider-account.model.ts';
+} from './mappers/provider-account.mapper.ts';
 
 @Injectable()
 export class ProvidersService {
