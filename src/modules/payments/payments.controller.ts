@@ -16,7 +16,7 @@ import { IdempotencyService } from '../idempotency/idempotency.service.ts';
 import { ChargeService } from './charge.service.ts';
 import { ResolutionService } from './resolution.service.ts';
 import { PaymentsService } from './payments.service.ts';
-import { toPaymentModel } from './payment.model.ts';
+import { toPaymentModel } from './mappers/payment.mapper.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
 import { isUuid } from '../../common/is-uuid.ts';
 

@@ -1,8 +1,8 @@
-import { Payment } from './entities/payment.entity.ts';
-import { Customer } from '../customers/entities/customer.entity.ts';
-import { toCustomerDetails } from '../customers/customer-details.ts';
-import type { CustomerDetails } from '../customers/customer-details.ts';
-import { PaymentStatus } from './states.ts';
+import { Payment } from '../entities/payment.entity.ts';
+import { Customer } from '../../customers/entities/customer.entity.ts';
+import { toCustomerDetails } from '../../customers/customer-details.ts';
+import type { CustomerDetails } from '../../customers/customer-details.ts';
+import { PaymentStatus } from '../states.ts';
 
 export type PaymentStatusDetail =
   | 'recorded, not charged'
@@ -11,7 +11,7 @@ export type PaymentStatusDetail =
   | 'no money moved; terminal — create a NEW payment'
   | 'abandoned and never charged; create a NEW payment';
 
-export interface PaymentPublicModel {
+export interface PaymentModel {
   id: string;
   reference: string;
   amount_minor: number;
@@ -34,7 +34,7 @@ const STATUS_DETAIL: Record<PaymentStatus, PaymentStatusDetail> = {
   expired: 'abandoned and never charged; create a NEW payment',
 };
 
-export function toPaymentModel(p: Payment, customer?: Customer | null): PaymentPublicModel {
+export function toPaymentModel(p: Payment, customer?: Customer | null): PaymentModel {
   return {
     customer_details: customer ? toCustomerDetails(customer) : null,
     id: p.id,
