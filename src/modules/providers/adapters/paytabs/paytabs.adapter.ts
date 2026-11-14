@@ -3,7 +3,6 @@ import { CurrenciesService } from '../../../currencies/currencies.service.ts';
 import { PaymentAttempt } from '../../../payments/entities/payment-attempt.entity.ts';
 import {
   AdapterCapabilities,
-  CheckoutCustomer,
   CheckoutInput,
   CheckoutResult,
   Outcome,
@@ -16,11 +15,6 @@ import { ProviderAccount } from '../../entities/provider-account.entity.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
 import { ProviderCredentialService } from '../../provider-credential.service.ts';
 
-type PaytabsBound = {
-  account: ProviderAccount;
-  credentials: Record<string, string>;
-};
-
 export class PaytabsAdapter implements ProviderAdapter {
   readonly providerCode = PROVIDER_CODE.Paytabs;
 
@@ -29,7 +23,7 @@ export class PaytabsAdapter implements ProviderAdapter {
     private readonly credentialsService: ProviderCredentialService,
     private readonly attempts: Repository<PaymentAttempt>,
     private readonly accounts: Repository<ProviderAccount>,
-    private readonly bound: PaytabsBound | null,
+    private readonly bound: { account: ProviderAccount; credentials: Record<string, string> } | null,
   ) {}
 
   capabilities(): AdapterCapabilities {
@@ -37,18 +31,15 @@ export class PaytabsAdapter implements ProviderAdapter {
   }
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
-    const { config, credentials } = this.requireBound();
+    if (!this.bound) throw new ProviderConfigError('paytabs: not bound');
+    const config = (this.bound.account.config ?? {}) as any;
+    const creds = this.bound.credentials;
     const currency = await this.currencies.requireEnabled(input.currency);
-    const baseUrl = this.baseUrl(config);
-    const profileId = this.stringConfig(config, 'profile_id');
-    const serverKey = this.requireCredential(credentials, 'server_key');
-
     const amount = this.currencies.minorToDecimal(input.amountMinor, currency.exponent);
-    const callbackUrl = this.callbackUrl(config);
-    const returnUrl = this.returnUrl(config);
+    const baseUrl = String(config.base_url || 'https://secure-egypt.paytabs.com').replace(/\/$/, '');
 
-    const body = {
-      profile_id: profileId,
+    const body: any = {
+      profile_id: config.profile_id,
       tran_type: 'sale',
       tran_class: 'ecom',
       cart_id: input.paymentId,
@@ -56,243 +47,96 @@ export class PaytabsAdapter implements ProviderAdapter {
       cart_amount: amount,
       cart_description: `payment ${input.paymentId}`,
       payment_methods: [input.method],
-      callback: callbackUrl,
-      return: returnUrl,
-      ...(input.customerDetails
-        ? { customer_details: this.customerDetails(input.customerDetails) }
-        : {}),
+      callback: config.callback_url,
+      return: config.return_url,
     };
-
-    const data = await this.post(baseUrl, '/payment/request', serverKey, body, config);
-    const redirectUrl = typeof data.redirect_url === 'string' ? data.redirect_url : null;
-    if (!redirectUrl) {
-      throw new ProviderConfigError('paytabs createCheckout: missing redirect_url');
+    const c = input.customerDetails;
+    if (c) {
+      body.customer_details = {
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        street1: c.street,
+        city: c.city,
+        state: c.state,
+        country: c.country?.toUpperCase(),
+        zip: c.zip,
+      };
     }
-    const tranRef =
-      typeof data.tran_ref === 'string' ? data.tran_ref : null;
-    return { providerReference: tranRef, redirectUrl };
+
+    const data = await this.post(baseUrl, '/payment/request', creds.server_key, body);
+    return { providerReference: data.tran_ref ?? null, redirectUrl: data.redirect_url };
   }
 
   async queryStatus(providerReference: string): Promise<Outcome> {
-    const { config, credentials } = this.requireBound();
-    return this.queryStatusWith(config, credentials, providerReference);
+    if (!this.bound) throw new ProviderConfigError('paytabs: not bound');
+    return this.queryWith(this.bound.account.config as any, this.bound.credentials, providerReference);
   }
 
   async verifyWebhook(
     headers: Record<string, string>,
     rawBody: Buffer,
+    _query: Record<string, string | string[] | undefined>,
   ): Promise<ProviderEvent | null> {
-    let parsed: Record<string, unknown>;
-    const contentType = headers['content-type'] ?? '';
+    const contentType = headers['content-type'] || '';
+    let parsed: any;
     try {
-      if (contentType.includes('application/x-www-form-urlencoded')) {
-        parsed = Object.fromEntries(
-          new URLSearchParams(rawBody.toString('utf8')),
-        ) as Record<string, unknown>;
-      } else {
-        parsed = JSON.parse(rawBody.toString('utf8')) as Record<string, unknown>;
-      }
+      parsed = contentType.includes('application/x-www-form-urlencoded')
+        ? Object.fromEntries(new URLSearchParams(rawBody.toString('utf8')))
+        : JSON.parse(rawBody.toString('utf8'));
     } catch {
       return null;
     }
 
-    const tranRef =
-      typeof parsed.tran_ref === 'string'
-        ? parsed.tran_ref
-        : typeof parsed.tranRef === 'string'
-          ? parsed.tranRef
-          : null;
-    if (!tranRef) {
-      return null;
-    }
+    const tranRef = parsed.tran_ref || parsed.tranRef;
+    if (!tranRef) return null;
 
-    const attempt = await this.attempts.findOne({
-      where: { providerReference: tranRef },
-    });
-    if (!attempt) {
-      return null;
-    }
+    const attempt = await this.attempts.findOne({ where: { providerReference: String(tranRef) } });
+    if (!attempt) return null;
+    const account = await this.accounts.findOne({ where: { id: attempt.providerAccountId } });
+    if (!account) return null;
+    const credentials = await this.credentialsService.load(account.id).catch(() => null);
+    if (!credentials) return null;
 
-    const account = await this.accounts.findOne({
-      where: { id: attempt.providerAccountId },
-    });
-    if (!account) {
-      return null;
-    }
-
-    let credentials: Record<string, string>;
-    try {
-      credentials = await this.credentialsService.load(account.id);
-    } catch {
-      return null;
-    }
-
-    let outcome: Outcome;
-    try {
-      outcome = await this.queryStatusWith(account.config ?? {}, credentials, tranRef);
-    } catch {
-      return null;
-    }
-
-    if (outcome.result === 'unknown') {
-      return null;
-    }
+    const outcome = await this.queryWith(account.config as any, credentials, String(tranRef)).catch(() => ({ result: 'unknown' as const }));
+    if (outcome.result === 'unknown') return null;
 
     return {
       providerEventId: null,
       eventType: `charge.${outcome.result}`,
       result: outcome.result,
-      providerReference: tranRef,
+      providerReference: String(tranRef),
       raw: parsed,
     };
   }
 
-  private async queryStatusWith(
-    config: Record<string, unknown>,
-    credentials: Record<string, string>,
-    providerReference: string,
-  ): Promise<Outcome> {
-    const baseUrl = this.baseUrl(config);
-    const profileId = this.stringConfig(config, 'profile_id');
-    const serverKey = this.requireCredential(credentials, 'server_key');
-
-    const data = await this.post(
-      baseUrl,
-      '/payment/query',
-      serverKey,
-      { profile_id: profileId, tran_ref: providerReference },
-      config,
-    );
-
-    const status = this.extractResponseStatus(data);
+  private async queryWith(config: any, credentials: Record<string, string>, providerReference: string): Promise<Outcome> {
+    const baseUrl = String(config?.base_url || 'https://secure-egypt.paytabs.com').replace(/\/$/, '');
+    const data = await this.post(baseUrl, '/payment/query', credentials.server_key, {
+      profile_id: config.profile_id,
+      tran_ref: providerReference,
+    });
+    const status = data.payment_result?.response_status || data.response_status;
     if (status === 'A') return { result: 'succeeded' };
     if (status === 'D' || status === 'C') return { result: 'failed' };
     return { result: 'unknown' };
   }
 
-  private extractResponseStatus(data: Record<string, unknown>): string | null {
-    const paymentResult = data.payment_result;
-    if (paymentResult && typeof paymentResult === 'object') {
-      const status = (paymentResult as Record<string, unknown>).response_status;
-      if (typeof status === 'string') return status;
-    }
-    const direct = data.response_status;
-    if (typeof direct === 'string') return direct;
-    return null;
-  }
-
-  private async post(
-    baseUrl: string,
-    path: string,
-    serverKey: string,
-    body: Record<string, unknown>,
-    config: Record<string, unknown>,
-  ): Promise<Record<string, unknown>> {
-    const timeoutMs = this.timeoutMs(config);
+  private async post(baseUrl: string, path: string, serverKey: string, body: any): Promise<any> {
     let response: Response;
     try {
       response = await fetch(`${baseUrl}${path}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: serverKey,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: serverKey },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(8000),
       });
     } catch (e) {
-      throw new ProviderTimeoutError(`paytabs ${path}: ${(e as Error).message}`);
+      throw new ProviderTimeoutError(`paytabs ${path}`);
     }
-
-    let payload: Record<string, unknown>;
-    try {
-      payload = (await response.json()) as Record<string, unknown>;
-    } catch {
-      payload = { raw: 'unparseable body' };
-    }
-
-    if (!response.ok || this.isConfigFault(payload)) {
-      throw new ProviderConfigError(
-        `paytabs ${path} -> HTTP ${response.status}: ${this.describe(payload)}`,
-      );
-    }
-
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new ProviderConfigError(`paytabs ${path}: ${response.status}`);
     return payload;
   }
-
-  private isConfigFault(payload: Record<string, unknown>): boolean {
-    const code = String(payload.code ?? payload.response_code ?? '');
-    return code.startsWith('4') || code === '1' || code === '401' || code === '400';
-  }
-
-  private describe(payload: Record<string, unknown>): string {
-    const code = payload.code ?? payload.response_code ?? '-';
-    const message = payload.message ?? payload.result ?? '-';
-    return `code=${String(code)} message=${String(message)}`;
-  }
-
-  private requireBound(): { config: Record<string, unknown>; credentials: Record<string, string> } {
-    if (!this.bound) {
-      throw new ProviderConfigError('paytabs adapter is not bound to an account');
-    }
-    return {
-      config: (this.bound.account.config ?? {}) as Record<string, unknown>,
-      credentials: this.bound.credentials,
-    };
-  }
-
-  private stringConfig(config: Record<string, unknown>, key: string): string {
-    const value = config[key];
-    if (typeof value !== 'string' || value.length === 0) {
-      throw new ProviderConfigError(`paytabs missing config: ${key}`);
-    }
-    return value;
-  }
-
-  private requireCredential(credentials: Record<string, string>, key: string): string {
-    const value = credentials[key];
-    if (!value) {
-      throw new ProviderConfigError(`paytabs missing credential: ${key}`);
-    }
-    return value;
-  }
-
-  private customerDetails(customer: CheckoutCustomer): Record<string, string> {
-    const details: Record<string, string> = {};
-    if (customer.name) details.name = customer.name;
-    if (customer.email) details.email = customer.email;
-    if (customer.phone) details.phone = customer.phone;
-    if (customer.street) details.street1 = customer.street;
-    if (customer.city) details.city = customer.city;
-    if (customer.state) details.state = customer.state;
-    if (customer.country) details.country = customer.country.toUpperCase();
-    if (customer.zip) details.zip = customer.zip;
-    return details;
-  }
-
-  private baseUrl(config: Record<string, unknown>): string {
-    const value = config.base_url;
-    if (typeof value === 'string' && value.length > 0) {
-      return value.replace(/\/$/, '');
-    }
-    return 'https://secure-egypt.paytabs.com';
-  }
-
-  private timeoutMs(config: Record<string, unknown>): number {
-    const value = config.timeout_ms;
-    if (typeof value === 'number' && value > 0) return value;
-    return 8000;
-  }
-
-  private callbackUrl(config: Record<string, unknown>): string {
-    const value = config.callback_url;
-    if (typeof value === 'string' && value.length > 0) return value;
-    throw new ProviderConfigError('paytabs missing config: callback_url');
-  }
-
-  private returnUrl(config: Record<string, unknown>): string {
-    const value = config.return_url;
-    if (typeof value === 'string' && value.length > 0) return value;
-    throw new ProviderConfigError('paytabs missing config: return_url');
-  }
 }
+
