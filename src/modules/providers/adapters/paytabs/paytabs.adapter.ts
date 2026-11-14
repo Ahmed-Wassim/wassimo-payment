@@ -111,6 +111,10 @@ export class PaytabsAdapter implements ProviderAdapter {
       profile_id: config.profile_id,
       tran_ref: providerReference,
     });
+    return this.outcomeFromQuery(data);
+  }
+
+  private outcomeFromQuery(data: any): Outcome {
     const status = data.payment_result?.response_status || data.response_status;
     if (status === 'A') return { result: 'succeeded' };
     if (status === 'D' || status === 'C') return { result: 'failed' };
