@@ -34,7 +34,7 @@ export class PaymobAdapter implements ProviderAdapter {
     const creds = this.bound.credentials;
 
     const customer = input.customerDetails!;
-    const parts = customer.name.trim().split(/\s+/);
+    const parts = customer.name!.trim().split(/\s+/);
     const first_name = parts[0] || 'NA';
     const last_name = parts.slice(1).join(' ') || '.';
     const amount = Number(input.amountMinor);
