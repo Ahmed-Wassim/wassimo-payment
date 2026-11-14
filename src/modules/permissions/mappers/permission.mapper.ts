@@ -1,4 +1,4 @@
-import { Permission } from './entities/permission.entity.ts';
+import { Permission } from '../../users/entities/permission.entity.ts';
 
 export class PermissionModel {
   code!: string;
