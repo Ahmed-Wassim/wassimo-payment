@@ -59,12 +59,7 @@ export class PaymobAdapter implements ProviderAdapter {
     const ctx = await this.context(providerReference);
     const base = String(ctx.config.base_url || 'https://accept.paymob.com').replace(/\/$/, '');
 
-    const token = ((await (await fetch(`${base}/api/auth/tokens`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: ctx.credentials.api_key }),
-    })).json()) as any).token;
-
+    const token = await this.authToken(base, ctx.credentials.api_key);
     const tx = (await (await fetch(`${base}/api/ecommerce/orders/transaction_inquiry`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -107,6 +102,16 @@ export class PaymobAdapter implements ProviderAdapter {
       state: customer.state || 'NA',
       country: String(customer.country || 'NA').toUpperCase(),
     };
+  }
+
+  private async authToken(base: string, apiKey: string): Promise<string> {
+    const res = await fetch(`${base}/api/auth/tokens`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey }),
+    });
+    const data = (await res.json()) as any;
+    return data.token;
   }
 
   private validHmac(tx: any, secret: string, received: string): boolean {
