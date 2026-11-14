@@ -16,6 +16,8 @@ export const PERMISSIONS = [
   // platform
   { code: 'platform:orgs:read', name: 'View all organizations', groupName: 'platform' },
   { code: 'platform:orgs:filter', name: 'Filter by organization', groupName: 'platform' },
+  // payments
+  { code: 'payments:read', name: 'View payments', groupName: 'payments' },
   // ... add more here later
 ] as const;
 

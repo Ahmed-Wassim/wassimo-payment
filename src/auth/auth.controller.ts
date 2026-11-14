@@ -27,7 +27,8 @@ export class AuthController {
     const appPerms = await this.users.listPermissionsByGroup('applications');
     const keyPerms = await this.users.listPermissionsByGroup('keys');
     const memberPerms = await this.users.listPermissionsByGroup('members');
-    for (const p of [...orgPerms, ...appPerms, ...keyPerms, ...memberPerms]) {
+    const paymentPerms = await this.users.listPermissionsByGroup('payments');
+    for (const p of [...orgPerms, ...appPerms, ...keyPerms, ...memberPerms, ...paymentPerms]) {
       await this.users.assignPermissionToRole(adminRole.id, p.code);
     }
     await this.users.createMembership(user.id, org.id, adminRole.id);
