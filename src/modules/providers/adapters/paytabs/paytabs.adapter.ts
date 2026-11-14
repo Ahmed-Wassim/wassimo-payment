@@ -45,18 +45,8 @@ export class PaytabsAdapter implements ProviderAdapter {
       callback: config.callback_url,
       return: config.return_url,
     };
-    const c = input.customerDetails;
-    if (c) {
-      body.customer_details = {
-        name: c.name,
-        email: c.email,
-        phone: c.phone,
-        street1: c.street,
-        city: c.city,
-        state: c.state,
-        country: c.country?.toUpperCase(),
-        zip: c.zip,
-      };
+    if (input.customerDetails) {
+      body.customer_details = this.customerDetails(input.customerDetails);
     }
 
     const data = await this.post(baseUrl, '/payment/request', creds.server_key, body);
@@ -112,6 +102,19 @@ export class PaytabsAdapter implements ProviderAdapter {
     if (status === 'A') return { result: 'succeeded' };
     if (status === 'D' || status === 'C') return { result: 'failed' };
     return { result: 'unknown' };
+  }
+
+  private customerDetails(c: any) {
+    return {
+      name: c.name,
+      email: c.email,
+      phone: c.phone,
+      street1: c.street,
+      city: c.city,
+      state: c.state,
+      country: c.country?.toUpperCase(),
+      zip: c.zip,
+    };
   }
 
   private parseWebhookBody(headers: Record<string, string>, rawBody: Buffer): any | null {
