@@ -3,6 +3,7 @@ export const PROVIDER_CODE = {
   Paytabs: 'paytabs',
   Paymob: 'paymob',
   Payfort: 'payfort',
+  Fawaterak: 'fawaterak',
 } as const;
 
 export type ProviderCode = (typeof PROVIDER_CODE)[keyof typeof PROVIDER_CODE];

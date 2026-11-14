@@ -61,6 +61,7 @@ export class PaymentProviderFactory {
           bound,
         );
       case PROVIDER_CODE.Payfort:
+      case PROVIDER_CODE.Fawaterak:
         throw new ServiceUnavailableException(
           `no adapter configured for provider ${code}`,
         );
@@ -95,6 +96,7 @@ export class PaymentProviderFactory {
           null,
         );
       case PROVIDER_CODE.Payfort:
+      case PROVIDER_CODE.Fawaterak:
         throw new ServiceUnavailableException(
           `no adapter configured for provider ${providerCode}`,
         );

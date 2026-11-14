@@ -54,8 +54,13 @@ export const PAYFORT_METHODS = [
   { code: 'stc_pay', name: 'STC Pay' },
 ] satisfies ProviderMethod[];
 
+export const FAWATERAK_METHODS = [
+  { code: 'hosted', name: 'Hosted Checkout' },
+] satisfies ProviderMethod[];
+
 export const PROVIDER_CATALOGUES = [
   { code: 'mock', name: 'Mock Provider', methods: MOCK_METHODS },
   { code: 'paytabs', name: 'PayTabs', methods: PAYTABS_METHODS },
   { code: 'payfort', name: 'PayFort', methods: PAYFORT_METHODS },
+  { code: 'fawaterak', name: 'Fawaterak', methods: FAWATERAK_METHODS },
 ] as const;
