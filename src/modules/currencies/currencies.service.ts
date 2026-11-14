@@ -7,7 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Currency } from './entities/currency.entity.ts';
-import { toCurrencyModel } from './currency.model.ts';
+import { toCurrencyModel } from './mappers/currency.mapper.ts';
 
 @Injectable()
 export class CurrenciesService {

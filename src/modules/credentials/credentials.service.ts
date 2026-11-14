@@ -3,7 +3,7 @@ import { ApiCredential } from './entities/api-credential.entity.ts';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
-import { CredentialModel, toCredentialModel } from './credential.model.ts';
+import { CredentialModel, toCredentialModel } from './mappers/credential.mapper.ts';
 import { Application } from '../applications/entities/application.entity.ts';
 import { CredentialEnvironment } from './entities/api-credential.entity.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';

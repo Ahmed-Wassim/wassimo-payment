@@ -1,4 +1,4 @@
-import { Currency } from './entities/currency.entity.ts';
+import { Currency } from '../entities/currency.entity.ts';
 
 export class CurrencyModel {
   id!: number;

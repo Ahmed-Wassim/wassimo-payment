@@ -1,4 +1,4 @@
-import { ApiCredential } from './entities/api-credential.entity.ts';
+import { ApiCredential } from '../entities/api-credential.entity.ts';
 
 export class CredentialModel {
   id!: string;
