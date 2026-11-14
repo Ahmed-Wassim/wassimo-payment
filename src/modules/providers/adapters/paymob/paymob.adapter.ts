@@ -28,10 +28,6 @@ export class PaymobAdapter implements ProviderAdapter {
     const config = (this.bound.account.config ?? {}) as Record<string, any>;
     const creds = this.bound.credentials;
 
-    const customer = input.customerDetails!;
-    const parts = customer.name!.trim().split(/\s+/);
-    const first_name = parts[0] || 'NA';
-    const last_name = parts.slice(1).join(' ') || '.';
     const amount = Number(input.amountMinor);
     const integrationId = (config.integration_ids as any)?.[input.method];
 
@@ -43,16 +39,7 @@ export class PaymobAdapter implements ProviderAdapter {
         currency: input.currency.toUpperCase(),
         payment_methods: [integrationId],
         items: [{ name: `payment ${input.paymentId}`.slice(0, 50), amount, quantity: 1 }],
-        billing_data: {
-          first_name,
-          last_name,
-          email: customer.email,
-          phone_number: customer.phone || 'NA',
-          street: customer.street || 'NA',
-          city: customer.city || 'NA',
-          state: customer.state || 'NA',
-          country: (customer.country || 'NA').toUpperCase(),
-        },
+        billing_data: this.billingData(input.customerDetails!),
         special_reference: input.paymentId,
         notification_url: config.notification_url,
         redirection_url: config.redirection_url,
@@ -104,6 +91,22 @@ export class PaymobAdapter implements ProviderAdapter {
       tx.is_voided, tx.order.id, tx.owner, tx.pending,
       s.pan, s.sub_type, s.type, tx.success,
     ].map((v) => (v === true ? 'true' : v === false ? 'false' : v == null ? '' : String(v))).join('');
+  }
+
+  private billingData(customer: any) {
+    const parts = String(customer.name || '').trim().split(/\s+/);
+    const first_name = parts[0] || 'NA';
+    const last_name = parts.slice(1).join(' ') || '.';
+    return {
+      first_name,
+      last_name,
+      email: customer.email,
+      phone_number: customer.phone || 'NA',
+      street: customer.street || 'NA',
+      city: customer.city || 'NA',
+      state: customer.state || 'NA',
+      country: String(customer.country || 'NA').toUpperCase(),
+    };
   }
 
   private validHmac(tx: any, secret: string, received: string): boolean {
