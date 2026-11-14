@@ -75,21 +75,19 @@ export class PaymobAdapter implements ProviderAdapter {
 
   async queryStatus(providerReference: string): Promise<Outcome> {
     const ctx = await this.context(providerReference);
-    const baseUrl = String(ctx.config.base_url || 'https://accept.paymob.com').replace(/\/$/, '');
+    const base = String(ctx.config.base_url || 'https://accept.paymob.com').replace(/\/$/, '');
 
-    const tokenRes = await fetch(`${baseUrl}/api/auth/tokens`, {
+    const token = ((await (await fetch(`${base}/api/auth/tokens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ api_key: ctx.credentials.api_key }),
-    });
-    const tokenData = (await tokenRes.json()) as any;
+    })).json()) as any).token;
 
-    const inquiryRes = await fetch(`${baseUrl}/api/ecommerce/orders/transaction_inquiry`, {
+    const tx = (await (await fetch(`${base}/api/ecommerce/orders/transaction_inquiry`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ auth_token: tokenData.token, order_id: providerReference }),
-    });
-    const tx = (await inquiryRes.json()) as any;
+      body: JSON.stringify({ auth_token: token, order_id: providerReference }),
+    })).json()) as any;
 
     if (tx.success && !tx.pending) return { result: 'succeeded' };
     if (!tx.success && !tx.pending) return { result: 'failed' };
@@ -104,43 +102,35 @@ export class PaymobAdapter implements ProviderAdapter {
     const hmac = Array.isArray(query.hmac) ? query.hmac[0] : query.hmac;
     if (!hmac) return null;
 
-    const body = JSON.parse(rawBody.toString('utf8')) as any;
+    let body: any;
+    try { body = JSON.parse(rawBody.toString('utf8')); } catch { return null; }
     const tx = body.obj;
     if (!tx?.order?.id) return null;
 
     const providerReference = String(tx.order.id);
     const attempt = await this.attempts.findOne({ where: { providerReference } });
     if (!attempt) return null;
-    const creds = await this.credentialsService.load(attempt.providerAccountId);
+    const creds = await this.credentialsService.load(attempt.providerAccountId).catch(() => null);
+    if (!creds?.hmac_secret) return null;
 
-    const source = tx.source_data || {};
-    const values = [
+    const s = tx.source_data || {};
+    const data = [
       tx.amount_cents, tx.created_at, tx.currency, tx.error_occured,
       tx.has_parent_transaction, tx.id, tx.integration_id, tx.is_3d_secure,
       tx.is_auth, tx.is_capture, tx.is_refunded, tx.is_standalone_payment,
       tx.is_voided, tx.order.id, tx.owner, tx.pending,
-      source.pan, source.sub_type, source.type, tx.success,
-    ];
-    const concatenated = values.map((v) => (v === true ? 'true' : v === false ? 'false' : v == null ? '' : String(v))).join('');
-    const expected = createHmac('sha512', creds.hmac_secret).update(concatenated).digest('hex');
+      s.pan, s.sub_type, s.type, tx.success,
+    ].map((v) => (v === true ? 'true' : v === false ? 'false' : v == null ? '' : String(v))).join('');
+
+    const expected = createHmac('sha512', creds.hmac_secret).update(data).digest('hex');
     try {
       if (!timingSafeEqual(Buffer.from(expected), Buffer.from(hmac))) return null;
     } catch {
       return null;
     }
 
-    let result: 'succeeded' | 'failed' | 'pending' | 'unknown' = 'unknown';
-    if (tx.success && !tx.pending) result = 'succeeded';
-    else if (!tx.success && !tx.pending) result = 'failed';
-    else if (tx.pending) result = 'pending';
-
-    return {
-      providerEventId: tx.id != null ? String(tx.id) : null,
-      eventType: `transaction.${result}`,
-      result,
-      providerReference,
-      raw: body,
-    };
+    const result = tx.success && !tx.pending ? 'succeeded' : !tx.success && !tx.pending ? 'failed' : tx.pending ? 'pending' : 'unknown';
+    return { providerEventId: tx.id != null ? String(tx.id) : null, eventType: `transaction.${result}`, result, providerReference, raw: body };
   }
 
   private async context(providerReference: string) {
