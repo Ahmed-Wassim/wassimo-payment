@@ -1,6 +1,6 @@
 import { Controller, HttpStatus, Param, Post, Req } from '@nestjs/common';
 import { ApiError } from '../../common/api-error.ts';
-import type { RawWebhookRequest } from './raw-webhook-request.ts';
+import type { RawWebhookRequest } from './dto/raw-webhook-request.ts';
 import { WebhooksService } from './webhooks.service.ts';
 
 @Controller()

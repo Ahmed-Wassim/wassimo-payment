@@ -7,7 +7,7 @@ import { attemptTransition } from '../payments/attempt-states.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { Payment } from '../payments/entities/payment.entity.ts';
 import { transition } from '../payments/states.ts';
-import { WebhookEvent } from './webhook-event.entity.ts';
+import { WebhookEvent } from './entities/webhook-event.entity.ts';
 
 @Injectable()
 export class WebhooksService {
