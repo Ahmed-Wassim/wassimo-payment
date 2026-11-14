@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { Repository } from 'typeorm';
 import { PaymentAttempt } from '../../../payments/entities/payment-attempt.entity.ts';
 import { ProviderAccount } from '../../entities/provider-account.entity.ts';
@@ -130,10 +130,61 @@ export class PaymobAdapter implements ProviderAdapter {
 
   async verifyWebhook(
     _headers: Record<string, string>,
-    _rawBody: Buffer,
-    _query: Record<string, string | string[] | undefined>,
+    rawBody: Buffer,
+    query: Record<string, string | string[] | undefined>,
   ): Promise<ProviderEvent | null> {
-    return null;
+    const receivedHmac = this.queryValue(query, 'hmac');
+    if (!receivedHmac) return null;
+
+    let body: Record<string, unknown>;
+    try {
+      body = JSON.parse(rawBody.toString('utf8')) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+
+    const obj = body.obj;
+    if (!obj || typeof obj !== 'object') return null;
+    const tx = obj as Record<string, unknown>;
+
+    const order = tx.order as Record<string, unknown> | undefined;
+    const orderId = order && typeof order === 'object' ? order.id : undefined;
+    const providerReference =
+      typeof orderId === 'string' || typeof orderId === 'number' ? String(orderId) : null;
+    if (!providerReference) return null;
+
+    const attempt = await this.attempts.findOne({ where: { providerReference } });
+    if (!attempt) return null;
+
+    let hmacSecret: string | undefined;
+    try {
+      const creds = await this.credentialsService.load(attempt.providerAccountId);
+      hmacSecret = creds.hmac_secret;
+    } catch {
+      return null;
+    }
+    if (!hmacSecret) return null;
+
+    const concatenated = this.hmacConcatenated(tx);
+    const expected = createHmac('sha512', hmacSecret).update(concatenated).digest('hex');
+    const receivedBuf = Buffer.from(receivedHmac);
+    const expectedBuf = Buffer.from(expected);
+    if (receivedBuf.length !== expectedBuf.length || !timingSafeEqual(receivedBuf, expectedBuf)) {
+      return null;
+    }
+
+    const txId = tx.id;
+    const providerEventId =
+      typeof txId === 'string' || typeof txId === 'number' ? String(txId) : null;
+    const result = this.mapResult(tx);
+
+    return {
+      providerEventId,
+      eventType: `transaction.${result}`,
+      result,
+      providerReference,
+      raw: body,
+    };
   }
 
   private requireBound(): PaymobBound {
@@ -173,5 +224,58 @@ export class PaymobAdapter implements ProviderAdapter {
     if (parts.length === 0) return { firstName: 'NA', lastName: 'NA' };
     if (parts.length === 1) return { firstName: parts[0], lastName: '.' };
     return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+  }
+
+  private queryValue(
+    query: Record<string, string | string[] | undefined>,
+    key: string,
+  ): string | undefined {
+    const value = query[key];
+    if (Array.isArray(value)) return value[0];
+    return value;
+  }
+
+  private hmacConcatenated(tx: Record<string, unknown>): string {
+    const source = (tx.source_data ?? {}) as Record<string, unknown>;
+    const order = (tx.order ?? {}) as Record<string, unknown>;
+    const values = [
+      tx.amount_cents,
+      tx.created_at,
+      tx.currency,
+      tx.error_occured,
+      tx.has_parent_transaction,
+      tx.id,
+      tx.integration_id,
+      tx.is_3d_secure,
+      tx.is_auth,
+      tx.is_capture,
+      tx.is_refunded,
+      tx.is_standalone_payment,
+      tx.is_voided,
+      order.id,
+      tx.owner,
+      tx.pending,
+      source.pan,
+      source.sub_type,
+      source.type,
+      tx.success,
+    ];
+    return values.map((v) => this.hmacValue(v)).join('');
+  }
+
+  private hmacValue(value: unknown): string {
+    if (value === true) return 'true';
+    if (value === false) return 'false';
+    if (value === null || value === undefined) return '';
+    return String(value);
+  }
+
+  private mapResult(tx: Record<string, unknown>): 'succeeded' | 'failed' | 'pending' | 'unknown' {
+    const success = tx.success === true;
+    const pending = tx.pending === true;
+    if (success && !pending) return 'succeeded';
+    if (!success && !pending) return 'failed';
+    if (pending) return 'pending';
+    return 'unknown';
   }
 }
