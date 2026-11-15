@@ -18,6 +18,7 @@ import { PaymentsModule } from './modules/payments/payments.module.ts';
 import { IdempotencyModule } from './modules/idempotency/idempotency.module.ts';
 import { WebhooksModule } from './modules/webhooks/webhooks.module.ts';
 import { CustomersModule } from './modules/customers/customers.module.ts';
+import { RefundsModule } from './modules/refunds/refunds.module.ts';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { CustomersModule } from './modules/customers/customers.module.ts';
     IdempotencyModule,
     WebhooksModule,
     CustomersModule,
+    RefundsModule,
   ],
   controllers: [HealthController],
 })
