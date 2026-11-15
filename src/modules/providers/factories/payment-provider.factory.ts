@@ -5,7 +5,7 @@ import { APP_CONFIG } from '../../../config/config.module.ts';
 import type { AppConfig } from '../../../config/configuration.ts';
 import { CurrenciesService } from '../../currencies/currencies.service.ts';
 import { PaymentAttempt } from '../../payments/entities/payment-attempt.entity.ts';
-import { ProviderAdapter } from '../adapter.ts';
+import { ProviderAdapter } from '../adapter/adapter.ts';
 import { MockAdapter } from '../adapters/mock/mock.adapter.ts';
 import { PaytabsAdapter } from '../adapters/paytabs/paytabs.adapter.ts';
 import { PaymobAdapter } from '../adapters/paymob/paymob.adapter.ts';

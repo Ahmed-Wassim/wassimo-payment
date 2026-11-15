@@ -5,7 +5,7 @@ import {
   Outcome,
   ProviderAdapter,
   ProviderEvent,
-} from '../../adapter.ts';
+} from '../../adapter/adapter.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
 import { MockHostedService, MockWebhookPayload } from './mock-hosted.service.ts';
 import { createHmac, timingSafeEqual } from 'crypto';

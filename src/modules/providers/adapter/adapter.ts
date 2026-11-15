@@ -40,8 +40,8 @@ export interface ProviderEvent {
   raw: unknown;
 }
 
-import type { CustomerDetails } from '../customers/customer-details.ts';
-import type { ProviderCode } from './provider-code.ts';
+import type { CustomerDetails } from '../../customers/customer-details.ts';
+import type { ProviderCode } from '../provider-code.ts';
 
 export interface ProviderAdapter {
   readonly providerCode: ProviderCode;

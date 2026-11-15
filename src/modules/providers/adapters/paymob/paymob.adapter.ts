@@ -9,7 +9,7 @@ import {
   ProviderAdapter,
   ProviderEvent,
   ProviderConfigError,
-} from '../../adapter.ts';
+} from '../../adapter/adapter.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
 import { ProviderCredentialService } from '../../provider-credential.service.ts';
 

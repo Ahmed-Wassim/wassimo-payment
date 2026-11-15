@@ -6,7 +6,7 @@ import { ApiError } from '../../common/api-error.ts';
 import {
   ProviderConfigError,
   ProviderTimeoutError,
-} from '../providers/adapter.ts';
+} from '../providers/adapter/adapter.ts';
 import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
 import { attemptTransition } from './attempt-states.ts';

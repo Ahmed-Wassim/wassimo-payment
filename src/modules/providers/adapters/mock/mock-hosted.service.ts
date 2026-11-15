@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { APP_CONFIG } from '../../../../config/config.module.ts';
 import type { AppConfig } from '../../../../config/configuration.ts';
-import type { CheckoutCustomer } from '../../adapter.ts';
+import type { CheckoutCustomer } from '../../adapter/adapter.ts';
 
 export type MockOutcome = 'pending' | 'succeeded' | 'failed';
 export type MockButton = 'approve' | 'decline' | 'approve-lost';
