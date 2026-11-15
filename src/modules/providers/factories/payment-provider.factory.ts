@@ -9,6 +9,7 @@ import { ProviderAdapter } from '../adapter/adapter.ts';
 import { MockAdapter } from '../adapters/mock/mock.adapter.ts';
 import { PaytabsAdapter } from '../adapters/paytabs/paytabs.adapter.ts';
 import { PaymobAdapter } from '../adapters/paymob/paymob.adapter.ts';
+import { FawaterakAdapter } from '../adapters/fawaterak/fawaterak.adapter.ts';
 import { ProviderAccount } from '../entities/provider-account.entity.ts';
 import { PROVIDER_CODE, isProviderCode } from '../provider-code.ts';
 import { ProviderCredentialService } from '../provider-credential.service.ts';
@@ -60,8 +61,14 @@ export class PaymentProviderFactory {
           this.accounts,
           bound,
         );
-      case PROVIDER_CODE.Payfort:
       case PROVIDER_CODE.Fawaterak:
+        return new FawaterakAdapter(
+          this.credentials,
+          this.attempts,
+          this.accounts,
+          bound,
+        );
+      case PROVIDER_CODE.Payfort:
         throw new ServiceUnavailableException(
           `no adapter configured for provider ${code}`,
         );
@@ -95,8 +102,14 @@ export class PaymentProviderFactory {
           this.accounts,
           null,
         );
-      case PROVIDER_CODE.Payfort:
       case PROVIDER_CODE.Fawaterak:
+        return new FawaterakAdapter(
+          this.credentials,
+          this.attempts,
+          this.accounts,
+          null,
+        );
+      case PROVIDER_CODE.Payfort:
         throw new ServiceUnavailableException(
           `no adapter configured for provider ${providerCode}`,
         );
