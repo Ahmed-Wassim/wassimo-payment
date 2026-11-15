@@ -7,6 +7,7 @@ export interface EnvVars {
   RABBITMQ_URL: string;
   OUTBOX_POLL_SECONDS: number;
   EXPIRY_SWEEP_SECONDS: number;
+  PAYMENT_TTL_SECONDS: number;
   JWT_SECRET: string;
   ENCRYPTION_KEY?: string;
   MOCK_WEBHOOK_SECRET: string;
@@ -22,6 +23,7 @@ export const envValidationSchema = Joi.object<EnvVars, true>({
   ),
   OUTBOX_POLL_SECONDS: Joi.number().integer().min(1).default(5),
   EXPIRY_SWEEP_SECONDS: Joi.number().integer().min(1).default(60),
+  PAYMENT_TTL_SECONDS: Joi.number().integer().min(1).default(1800),
   JWT_SECRET: Joi.string().default('dev-jwt-secret-change-in-prod'),
   ENCRYPTION_KEY: Joi.string().hex().length(64).optional(),
   MOCK_WEBHOOK_SECRET: Joi.string().min(1).default('mock-dev-secret'),

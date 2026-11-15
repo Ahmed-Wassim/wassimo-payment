@@ -13,6 +13,7 @@ import { PaymentsService } from './payments.service.ts';
 import { PaymentsController } from './payments.controller.ts';
 import { ResolutionService } from './resolution.service.ts';
 import { ReturnController } from './return.controller.ts';
+import { ExpiryService } from './expiry.service.ts';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { ReturnController } from './return.controller.ts';
     CustomersModule,
   ],
   controllers: [PaymentsController, ReturnController],
-  providers: [PaymentsService, ChargeService, ResolutionService],
+  providers: [PaymentsService, ChargeService, ResolutionService, ExpiryService],
   exports: [PaymentsService],
 })
 export class PaymentsModule {}

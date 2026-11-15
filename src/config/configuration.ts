@@ -7,7 +7,7 @@ export interface AppConfig {
   db: { url: string };
   broker: { url: string };
   outbox: { pollSeconds: number };
-  expiry: { sweepSeconds: number };
+  expiry: { ttlSeconds: number; sweepSeconds: number };
   jwt: { secret: string };
   encryption: { key: string | null };
   mock: { webhookSecret: string };
@@ -20,7 +20,7 @@ export function loadConfig(): AppConfig {
     db: { url: env.DATABASE_URL },
     broker: { url: env.RABBITMQ_URL },
     outbox: { pollSeconds: env.OUTBOX_POLL_SECONDS },
-    expiry: { sweepSeconds: env.EXPIRY_SWEEP_SECONDS },
+    expiry: { ttlSeconds: env.PAYMENT_TTL_SECONDS, sweepSeconds: env.EXPIRY_SWEEP_SECONDS },
     jwt: { secret: env.JWT_SECRET },
     encryption: { key: env.ENCRYPTION_KEY ?? null },
     mock: { webhookSecret: env.MOCK_WEBHOOK_SECRET },
