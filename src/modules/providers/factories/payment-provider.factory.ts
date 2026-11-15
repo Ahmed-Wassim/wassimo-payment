@@ -63,6 +63,7 @@ export class PaymentProviderFactory {
         );
       case PROVIDER_CODE.Fawaterak:
         return new FawaterakAdapter(
+          this.currencies,
           this.credentials,
           this.attempts,
           this.accounts,
@@ -104,6 +105,7 @@ export class PaymentProviderFactory {
         );
       case PROVIDER_CODE.Fawaterak:
         return new FawaterakAdapter(
+          this.currencies,
           this.credentials,
           this.attempts,
           this.accounts,
