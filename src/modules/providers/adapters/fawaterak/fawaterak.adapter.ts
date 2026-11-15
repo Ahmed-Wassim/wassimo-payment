@@ -10,6 +10,8 @@ import {
   ProviderAdapter,
   ProviderEvent,
   ProviderConfigError,
+  RefundInput,
+  RefundResult,
 } from '../../adapter/adapter.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
 import { ProviderCredentialService } from '../../provider-credential.service.ts';
@@ -86,6 +88,10 @@ export class FawaterakAdapter implements ProviderAdapter {
       return { result: 'failed' };
     }
     return { result: 'unknown' };
+  }
+
+  async refund(_input: RefundInput): Promise<RefundResult> {
+    throw new ProviderConfigError('fawaterak refund: not implemented');
   }
 
   private async getTransaction(intentKey: string, config: any, credentials: Record<string, string>) {

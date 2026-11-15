@@ -65,6 +65,29 @@ export class MockHostedService {
     return session;
   }
 
+  openRefundSession(
+    paymentId: string,
+    paymentProviderRef: string,
+    amountMinor: bigint,
+    currency: string,
+  ): { sessionRef: string; lost: boolean } {
+    const lost = process.env.MOCK_REFUND_MODE === 'lost-response';
+    const sessionRef = 'mrf_' + randomBytes(6).toString('hex');
+    const session: MockSession = {
+      sessionRef,
+      paymentId,
+      amountMinor,
+      currency,
+      method: `refund_of_${paymentProviderRef}`,
+      customer: null,
+      outcome: lost ? 'pending' : 'succeeded',
+      webhookDelivered: false,
+      webhookSecret: this.secret,
+    };
+    this.sessions.set(sessionRef, session);
+    return { sessionRef, lost };
+  }
+
   completeOutcome(sessionRef: string, button: MockButton): MockSession {
     const session = this.sessions.get(sessionRef);
     if (!session) {

@@ -9,6 +9,8 @@ import {
   ProviderConfigError,
   ProviderEvent,
   ProviderTimeoutError,
+  RefundInput,
+  RefundResult,
 } from '../../adapter/adapter.ts';
 import { ProviderAccount } from '../../entities/provider-account.entity.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
@@ -56,6 +58,29 @@ export class PaytabsAdapter implements ProviderAdapter {
   async queryStatus(providerReference: string): Promise<Outcome> {
     if (!this.bound) throw new ProviderConfigError('paytabs: not bound');
     return this.queryWith(this.bound.account.config as any, this.bound.credentials, providerReference);
+  }
+
+  async refund(input: RefundInput): Promise<RefundResult> {
+    if (!this.bound) throw new ProviderConfigError('paytabs: not bound');
+    const config = (this.bound.account.config ?? {}) as any;
+    const creds = this.bound.credentials;
+    const currency = await this.currencies.requireEnabled(input.currency);
+    const amount = this.currencies.minorToDecimal(input.amountMinor, currency.exponent);
+    const baseUrl = String(config.base_url || 'https://secure-egypt.paytabs.com').replace(/\/$/, '');
+    const data = await this.post(baseUrl, '/payment/refund', creds.server_key, {
+      profile_id: config.profile_id,
+      tran_type: 'refund',
+      tran_class: 'ecom',
+      cart_id: input.paymentId,
+      cart_currency: input.currency.toUpperCase(),
+      cart_amount: amount,
+      tran_ref: input.providerReference,
+    });
+    const refundRef = data.tran_ref || data.refund_ref;
+    if (!refundRef) {
+      throw new ProviderConfigError('paytabs refund: missing tran_ref');
+    }
+    return { providerRef: String(refundRef) };
   }
 
   async verifyWebhook(

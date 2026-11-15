@@ -32,6 +32,17 @@ export interface Outcome {
   result: 'succeeded' | 'failed' | 'unknown';
 }
 
+export interface RefundInput {
+  paymentId: string;
+  providerReference: string;
+  amountMinor: bigint;
+  currency: string;
+}
+
+export interface RefundResult {
+  providerRef: string;
+}
+
 export interface ProviderEvent {
   providerEventId: string | null;
   eventType: string;
@@ -47,6 +58,7 @@ export interface ProviderAdapter {
   readonly providerCode: ProviderCode;
   createCheckout(input: CheckoutInput): Promise<CheckoutResult>;
   queryStatus(providerReference: string): Promise<Outcome>;
+  refund(input: RefundInput): Promise<RefundResult>;
   verifyWebhook(
     headers: Record<string, string>,
     rawBody: Buffer,

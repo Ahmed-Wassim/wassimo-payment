@@ -9,6 +9,8 @@ import {
   ProviderAdapter,
   ProviderEvent,
   ProviderConfigError,
+  RefundInput,
+  RefundResult,
 } from '../../adapter/adapter.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
 import { ProviderCredentialService } from '../../provider-credential.service.ts';
@@ -63,6 +65,10 @@ export class PaymobAdapter implements ProviderAdapter {
 
     const result = this.txResult(tx);
     return { result: result === 'pending' ? 'unknown' : result };
+  }
+
+  async refund(_input: RefundInput): Promise<RefundResult> {
+    throw new ProviderConfigError('paymob refund: not implemented');
   }
 
   private txResult(tx: any): 'succeeded' | 'failed' | 'pending' | 'unknown' {

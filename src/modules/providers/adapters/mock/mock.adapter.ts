@@ -5,6 +5,9 @@ import {
   Outcome,
   ProviderAdapter,
   ProviderEvent,
+  RefundInput,
+  RefundResult,
+  ProviderTimeoutError,
 } from '../../adapter/adapter.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
 import { MockHostedService, MockWebhookPayload } from './mock-hosted.service.ts';
@@ -41,6 +44,19 @@ export class MockAdapter implements ProviderAdapter {
       return { result: 'unknown' };
     }
     return { result: session.outcome };
+  }
+
+  async refund(input: RefundInput): Promise<RefundResult> {
+    const session = this.hosted.openRefundSession(
+      input.paymentId,
+      input.providerReference,
+      input.amountMinor,
+      input.currency,
+    );
+    if (session.lost) {
+      throw new ProviderTimeoutError('mock refund response lost (MOCK_REFUND_MODE=lost-response)');
+    }
+    return { providerRef: session.sessionRef };
   }
 
   async verifyWebhook(
