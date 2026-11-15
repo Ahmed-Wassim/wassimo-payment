@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Permission } from '../users/entities/permission.entity.ts';
-import { PERMISSIONS } from './permissions.constant.ts';
+import { Permission } from '../../users/entities/permission.entity.ts';
+import { PERMISSIONS } from '../constants/permissions.constant.ts';
 
 @Injectable()
 export class PermissionsSeeder {
