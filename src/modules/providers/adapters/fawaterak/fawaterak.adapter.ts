@@ -77,15 +77,111 @@ export class FawaterakAdapter implements ProviderAdapter {
   }
 
   async queryStatus(providerReference: string): Promise<Outcome> {
+    const { config, credentials } = await this.context(providerReference);
+    const tx = await this.getTransaction(providerReference, config, credentials);
+    const paid = tx?.paid;
+    if (paid === 1 || paid === '1' || paid === true) return { result: 'succeeded' };
+    const status = String(tx?.status_text || '').toLowerCase();
+    if (['failed', 'fail', 'expired', 'canceled', 'cancelled'].includes(status)) {
+      return { result: 'failed' };
+    }
     return { result: 'unknown' };
+  }
+
+  private async getTransaction(intentKey: string, config: any, credentials: Record<string, string>) {
+    const baseUrl = this.baseUrl(config);
+    const token = await this.accessToken(baseUrl, credentials);
+    const res = await fetch(`${baseUrl}/api/v3/getTransactionData`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ intent_key: intentKey }),
+    });
+    const data = (await res.json().catch(() => ({}))) as any;
+    return data?.data || data;
+  }
+
+  private async context(providerReference: string) {
+    if (this.bound) {
+      return { config: (this.bound.account.config ?? {}) as any, credentials: this.bound.credentials };
+    }
+    const attempt = await this.attempts.findOne({ where: { providerReference } });
+    const account = await this.accounts.findOne({ where: { id: attempt!.providerAccountId } });
+    const credentials = await this.credentialsService.load(account!.id);
+    return { config: (account!.config ?? {}) as any, credentials };
   }
 
   async verifyWebhook(
     headers: Record<string, string>,
     rawBody: Buffer,
-    query: Record<string, string | string[] | undefined>,
+    _query: Record<string, string | string[] | undefined>,
   ): Promise<ProviderEvent | null> {
-    return null;
+    const body = this.parseBody(headers, rawBody);
+    if (!body) return null;
+
+    const transactionKey = body.transaction_key || body.transactionKey || body.intent_key;
+    const transactionId = body.transaction_id ?? body.transactionId;
+    const status = String(body.status || body.invoice_status || '').toLowerCase();
+    const paymentMethod = body.payment_method || body.paymentMethod || '';
+    if (!transactionKey) return null;
+
+    const providerReference = String(transactionKey);
+    const attempt = await this.attempts.findOne({ where: { providerReference } });
+    if (!attempt) return null;
+
+    const creds = await this.credentialsService.load(attempt.providerAccountId).catch(() => null);
+    const vendorKey = creds?.vendor_api_key || creds?.api_key;
+    if (!vendorKey) return null;
+
+    const receivedHash = body.transactionHashKey || body.hashKey || body.hash_key;
+    if (receivedHash) {
+      const signed = `TransactionId=${transactionId ?? ''}&TransactionKey=${transactionKey}&PaymentMethod=${paymentMethod}`;
+      const expected = createHmac('sha256', vendorKey).update(signed).digest('hex');
+      if (!this.safeEqual(expected, String(receivedHash))) return null;
+    }
+
+    const account = await this.accounts.findOne({ where: { id: attempt.providerAccountId } });
+    if (!account) return null;
+    const tx = await this.getTransaction(providerReference, account.config as any, creds as any).catch(() => null);
+    const result = this.outcomeFromTransaction(tx, status);
+    if (result === 'unknown') return null;
+
+    return {
+      providerEventId: transactionId != null ? String(transactionId) : null,
+      eventType: `transaction.${result}`,
+      result,
+      providerReference,
+      raw: body,
+    };
+  }
+
+  private outcomeFromTransaction(tx: any, fallbackStatus: string): 'succeeded' | 'failed' | 'pending' | 'unknown' {
+    const paid = tx?.paid;
+    if (paid === 1 || paid === '1' || paid === true) return 'succeeded';
+    const status = String(tx?.status_text || tx?.status || fallbackStatus || '').toLowerCase();
+    if (['paid', 'success', 'succeeded'].includes(status)) return 'succeeded';
+    if (['failed', 'fail', 'expired', 'canceled', 'cancelled'].includes(status)) return 'failed';
+    if (status === 'pending') return 'pending';
+    return 'unknown';
+  }
+
+  private parseBody(headers: Record<string, string>, rawBody: Buffer): any | null {
+    const contentType = headers['content-type'] || '';
+    try {
+      if (contentType.includes('application/x-www-form-urlencoded')) {
+        return Object.fromEntries(new URLSearchParams(rawBody.toString('utf8')));
+      }
+      return JSON.parse(rawBody.toString('utf8'));
+    } catch {
+      return null;
+    }
+  }
+
+  private safeEqual(expected: string, received: string): boolean {
+    try {
+      return timingSafeEqual(Buffer.from(expected), Buffer.from(received));
+    } catch {
+      return false;
+    }
   }
 
   private baseUrl(config: any): string {
