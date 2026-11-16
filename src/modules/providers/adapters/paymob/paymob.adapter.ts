@@ -33,7 +33,10 @@ export class PaymobAdapter implements ProviderAdapter {
     const creds = this.bound.credentials;
 
     const amount = Number(input.amountMinor);
-    const integrationId = (config.integration_ids as any)?.[input.method];
+    const integrationId = Number((config.integration_ids as any)?.[input.method]);
+    if (!Number.isInteger(integrationId) || integrationId <= 0) {
+      throw new ProviderConfigError(`paymob: no integration id configured for method '${input.method}'`);
+    }
 
     const res = await fetch(`${String(config.base_url || 'https://accept.paymob.com').replace(/\/$/, '')}/v1/intention/`, {
       method: 'POST',
@@ -41,7 +44,7 @@ export class PaymobAdapter implements ProviderAdapter {
       body: JSON.stringify({
         amount,
         currency: input.currency.toUpperCase(),
-        payment_methods: [integrationId],
+        payment_methods: [Number(integrationId)],
         items: [{ name: `payment ${input.paymentId}`.slice(0, 50), amount, quantity: 1 }],
         billing_data: this.billingData(input.customerDetails!),
         special_reference: input.paymentId,
