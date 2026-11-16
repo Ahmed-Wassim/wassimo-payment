@@ -81,7 +81,7 @@ export class PaymobAdapter implements ProviderAdapter {
 
     // Look up the transaction to get the transaction id
     const tx = await this.inquiry(base, token, input.providerReference);
-    const transactionId = tx?.id;
+    const transactionId = tx?.is_refund ? tx?.parent_transaction : tx?.id;
     if (!transactionId) {
       throw new ProviderConfigError('paymob refund: transaction id not found');
     }
@@ -92,7 +92,7 @@ export class PaymobAdapter implements ProviderAdapter {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         auth_token: token,
-        transaction_id: transactionId,
+        transaction_id: Number(transactionId),
         amount_cents: amountCents,
       }),
     });
