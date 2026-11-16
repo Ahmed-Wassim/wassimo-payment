@@ -39,6 +39,10 @@ export class PaymobAdapter implements ProviderAdapter {
       throw new ProviderConfigError(`paymob: no integration id configured for method '${input.method}'`);
     }
 
+    if (input.method === 'mobile_wallet') {
+      return this.createClassicWalletCheckout(input, config, creds, amount, integrationId);
+    }
+
     const res = await fetch(`${String(config.base_url || 'https://accept.paymob.com').replace(/\/$/, '')}/v1/intention/`, {
       method: 'POST',
       headers: { Authorization: `Token ${creds.secret_key}`, 'Content-Type': 'application/json' },
@@ -59,6 +63,89 @@ export class PaymobAdapter implements ProviderAdapter {
     return {
       providerReference: String(data.intention_order_id),
       redirectUrl: this.checkoutUrl(config, creds.public_key, data.client_secret),
+    };
+  }
+
+  private async createClassicWalletCheckout(
+    input: CheckoutInput,
+    config: Record<string, any>,
+    creds: Record<string, string>,
+    amount: number,
+    integrationId: number,
+  ): Promise<CheckoutResult> {
+    const base = String(config.base_url || 'https://accept.paymob.com').replace(/\/$/, '');
+    const authToken = await this.authToken(base, creds.api_key);
+    const billing = this.billingData(input.customerDetails || {});
+
+    const orderRes = await fetch(`${base}/api/ecommerce/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        auth_token: authToken,
+        delivery_needed: false,
+        amount_cents: String(amount),
+        currency: input.currency.toUpperCase(),
+        merchant_order_id: input.paymentId,
+        items: [],
+      }),
+    });
+    const order = (await orderRes.json().catch(() => ({}))) as any;
+    if (!orderRes.ok || !order?.id) {
+      throw new ProviderConfigError(`paymob wallet order: ${orderRes.status}`);
+    }
+
+    const pkBilling = {
+      apartment: 'NA',
+      floor: 'NA',
+      building: 'NA',
+      shipping_method: 'NA',
+      postal_code: String(input.customerDetails?.zip || 'NA'),
+      ...billing,
+    };
+    const pkRes = await fetch(`${base}/api/acceptance/payment_keys`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        auth_token: authToken,
+        amount_cents: String(amount),
+        expiration: 3600,
+        order_id: order.id,
+        billing_data: pkBilling,
+        currency: input.currency.toUpperCase(),
+        integration_id: integrationId,
+        lock_order_when_paid: false,
+      }),
+    });
+    const pk = (await pkRes.json().catch(() => ({}))) as any;
+    if (!pkRes.ok || !pk?.token) {
+      throw new ProviderConfigError(`paymob wallet payment key: ${pkRes.status}`);
+    }
+
+    const identifier = String(input.customerDetails?.phone || '').trim();
+    if (!identifier) {
+      throw new ProviderConfigError('paymob wallet: customer phone number is required');
+    }
+
+    const payRes = await fetch(`${base}/api/acceptance/payments/pay`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: { identifier, subtype: 'WALLET' },
+        payment_token: pk.token,
+      }),
+    });
+    const pay = (await payRes.json().catch(() => ({}))) as any;
+    if (!payRes.ok) {
+      throw new ProviderConfigError(`paymob wallet pay: ${payRes.status}`);
+    }
+    const redirectUrl = pay.redirect_url || pay.iframe_redirection_url || pay.redirection_url;
+    if (!redirectUrl) {
+      throw new ProviderConfigError('paymob wallet: missing redirect url');
+    }
+
+    return {
+      providerReference: String(order.id),
+      redirectUrl: String(redirectUrl),
     };
   }
 
