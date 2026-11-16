@@ -2,8 +2,8 @@ import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
-import { ApiError } from '../../common/api-error.ts';
-import { isUuid } from '../../common/is-uuid.ts';
+import { ApiError } from '../../common/errors/api-error.ts';
+import { isUuid } from '../../common/utils/is-uuid.ts';
 import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
@@ -67,7 +67,7 @@ export class RefundsService {
       }
       throw e;
     }
-    if (account.organizationId !== payment.organizationId) {
+    if (account.organization.id !== payment.organizationId) {
       throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this organization');
     }
     const adapter = await this.factory.forAccount(account);

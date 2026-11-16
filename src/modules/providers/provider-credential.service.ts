@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
 import { APP_CONFIG } from '../../config/config.module.ts';
 import type { AppConfig } from '../../config/configuration.ts';
-import { ApiError } from '../../common/api-error.ts';
+import { ApiError } from '../../common/errors/api-error.ts';
 import { ProviderAccount } from './entities/provider-account.entity.ts';
 import { ProviderCredential } from './entities/provider-credential.entity.ts';
 import { decryptPayload, encryptPayload } from './crypto.ts';
@@ -33,7 +33,7 @@ export class ProviderCredentialService {
     const account = await this.accounts.findOne({ where: { id: accountId } });
     if (
       !account ||
-      (!actor.isSuperAdmin && account.organizationId !== actor.organizationId)
+      (!actor.isSuperAdmin && account.organization.id !== actor.organizationId)
     ) {
       throw new NotFoundException(`Provider account not found ${accountId}`);
     }

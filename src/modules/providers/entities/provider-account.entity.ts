@@ -2,9 +2,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Organization } from '../../organizations/entities/organization.entity.ts';
+import { Application } from '../../applications/entities/application.entity.ts';
 
 export type ProviderEnvironment = 'test' | 'live';
 
@@ -15,11 +19,13 @@ export class ProviderAccount {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'organization_id', type: 'uuid' })
-  organizationId!: string;
+  @ManyToOne(() => Organization, { onDelete: 'CASCADE', nullable: false })
+  @JoinColumn({ name: 'organization_id' })
+  organization!: Organization;
 
-  @Column({ name: 'application_id', type: 'uuid' })
-  applicationId!: string;
+  @ManyToOne(() => Application, { onDelete: 'CASCADE', nullable: false })
+  @JoinColumn({ name: 'application_id' })
+  application!: Application;
 
   @Column({ name: 'provider_code', type: 'text' })
   providerCode!: string;

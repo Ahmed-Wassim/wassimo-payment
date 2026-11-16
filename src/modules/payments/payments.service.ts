@@ -2,7 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
-import { ApiError } from '../../common/api-error.ts';
+import { ApiError } from '../../common/errors/api-error.ts';
 import { CurrenciesService } from '../currencies/currencies.service.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
@@ -35,8 +35,8 @@ export class PaymentsService {
     const account = await this.providers.requireById(dto.provider_account_id);
     if (
       !account ||
-      account.organizationId !== auth.organizationId ||
-      account.applicationId !== auth.applicationId
+      account.organization.id !== auth.organizationId ||
+      account.application.id !== auth.applicationId
     ) {
       throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this application');
     }

@@ -6,11 +6,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ApiError } from '../../common/api-error.ts';
+import { ApiError } from '../../common/errors/api-error.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { ProviderAccount } from './entities/provider-account.entity.ts';
 import { toProviderModel } from './mappers/provider.mapper.ts';
-import { isUuid } from '../../common/is-uuid.ts';
+import { isUuid } from '../../common/utils/is-uuid.ts';
 import { Provider, ProviderMethod } from './entities/provider.entity.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
 import { UpdateProviderAccountDto } from './dto/update-provider-account.dto.ts';
@@ -31,7 +31,7 @@ export class ProvidersService {
   ) {}
 
   async listAccounts(): Promise<ProviderAccountModel[]> {
-    const rows = await this.accounts.find({ order: { createdAt: 'ASC' } });
+    const rows = await this.accounts.find({ relations: { organization: true, application: true }, order: { createdAt: 'ASC' } });
     return rows.map((row) => toProviderAccountModel(row));
   }
 
@@ -39,15 +39,15 @@ export class ProvidersService {
     actor: { organizationId: string | null; isSuperAdmin: boolean },
     filter: FilterDto,
   ): Promise<ProviderAccountModel[]> {
-    const rows = await this.accounts.find({ order: { createdAt: 'ASC' } });
+    const rows = await this.accounts.find({ relations: { organization: true, application: true }, order: { createdAt: 'ASC' } });
 
     const organizationId = actor.isSuperAdmin
       ? filter.organizationId ?? null
       : actor.organizationId;
 
     const filtered = rows.filter((r) => {
-      if (organizationId && r.organizationId !== organizationId) return false;
-      if (filter.applicationId && r.applicationId !== filter.applicationId) return false;
+      if (organizationId && r.organization.id !== organizationId) return false;
+      if (filter.applicationId && r.application.id !== filter.applicationId) return false;
       return true;
     });
 
@@ -80,7 +80,7 @@ export class ProvidersService {
     if (!isUuid(id)) {
       throw new BadRequestException('malformed provider account id');
     }
-    const row = await this.accounts.findOne({ where: { id } });
+    const row = await this.accounts.findOne({ where: { id }, relations: { organization: true, application: true } });
     if (!row) throw new NotFoundException(`Provider account not found ${id}`);
     return row;
   }
@@ -92,8 +92,8 @@ export class ProvidersService {
     if (!isUuid(id)) {
       throw new BadRequestException('malformed provider account id');
     }
-    const row = await this.accounts.findOne({ where: { id } });
-    if (!row || (!actor.isSuperAdmin && row.organizationId !== actor.organizationId)) {
+    const row = await this.accounts.findOne({ where: { id }, relations: { organization: true, application: true } });
+    if (!row || (!actor.isSuperAdmin && row.organization.id !== actor.organizationId)) {
       throw new NotFoundException(`Provider account not found ${id}`);
     }
     return row;
@@ -143,8 +143,8 @@ export class ProvidersService {
     this.assertMethodsSupported(provider, dto.supportedMethods);
 
     const row = this.accounts.create({
-      organizationId: dto.organizationId,
-      applicationId: dto.applicationId,
+      organization: org as any,
+      application: application as any,
       providerCode: dto.providerCode,
       environment: dto.environment,
       displayName: dto.displayName,

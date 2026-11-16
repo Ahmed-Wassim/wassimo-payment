@@ -1,8 +1,9 @@
 import { ApiCredential } from '../entities/api-credential.entity.ts';
+import { toApplicationModel, ApplicationModel } from '../../applications/mappers/application.mapper.ts';
 
 export class CredentialModel {
   id!: string;
-  applicationId!: string;
+  application!: ApplicationModel;
   keyId!: string;
   prefix!: string;
   environment!: string;
@@ -16,7 +17,7 @@ export class CredentialModel {
 export function toCredentialModel(row: ApiCredential): CredentialModel {
   return {
     id: row.id,
-    applicationId: row.application.id,
+    application: toApplicationModel(row.application),
     keyId: row.keyId,
     prefix: row.prefix,
     environment: row.environment,

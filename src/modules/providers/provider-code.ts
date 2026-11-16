@@ -2,7 +2,6 @@ export const PROVIDER_CODE = {
   Mock: 'mock',
   Paytabs: 'paytabs',
   Paymob: 'paymob',
-  Payfort: 'payfort',
   Fawaterak: 'fawaterak',
 } as const;
 

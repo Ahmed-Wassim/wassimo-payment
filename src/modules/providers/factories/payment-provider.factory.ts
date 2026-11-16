@@ -69,10 +69,6 @@ export class PaymentProviderFactory {
           this.accounts,
           bound,
         );
-      case PROVIDER_CODE.Payfort:
-        throw new ServiceUnavailableException(
-          `no adapter configured for provider ${code}`,
-        );
     }
   }
 
@@ -110,10 +106,6 @@ export class PaymentProviderFactory {
           this.attempts,
           this.accounts,
           null,
-        );
-      case PROVIDER_CODE.Payfort:
-        throw new ServiceUnavailableException(
-          `no adapter configured for provider ${providerCode}`,
         );
     }
   }

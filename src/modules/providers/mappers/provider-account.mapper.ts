@@ -1,8 +1,11 @@
-import { ProviderAccount } from "../entities/provider-account.entity.ts";
+import { ProviderAccount } from '../entities/provider-account.entity.ts';
+import { toOrganizationModel, OrganizationModel } from '../../organizations/mappers/organization.mapper.ts';
+import { toApplicationModel, ApplicationModel } from '../../applications/mappers/application.mapper.ts';
 
 export class ProviderAccountModel {
   id!: string;
-  organizationId!: string;
+  organization!: OrganizationModel;
+  application!: ApplicationModel;
   providerCode!: string;
   environment!: string;
   displayName!: string;
@@ -14,12 +17,11 @@ export class ProviderAccountModel {
   updatedAt!: Date;
 }
 
-export function toProviderAccountModel (
-  row: ProviderAccount,
-): ProviderAccountModel {
+export function toProviderAccountModel(row: ProviderAccount): ProviderAccountModel {
   return {
     id: row.id,
-    organizationId: row.organizationId,
+    organization: toOrganizationModel(row.organization),
+    application: toApplicationModel(row.application),
     providerCode: row.providerCode,
     environment: row.environment,
     displayName: row.displayName,

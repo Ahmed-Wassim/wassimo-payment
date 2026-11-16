@@ -35,23 +35,8 @@ export const PAYTABS_METHODS = [
   { code: 'tru', name: 'TRU' },
 ] satisfies ProviderMethod[];
 
-export const PAYFORT_METHODS = [
-  { code: 'all', name: 'All Available Methods', is_special: true },
-  { code: 'visa', name: 'Visa' },
-  { code: 'mastercard', name: 'Mastercard' },
-  { code: 'amex', name: 'American Express' },
-  { code: 'meeza', name: 'Meeza' },
-  { code: 'mada', name: 'mada' },
-  { code: 'sadad', name: 'SADAD' },
-  { code: 'naps', name: 'NAPS' },
-  { code: 'knet', name: 'KNET' },
-  { code: 'omannet', name: 'OmanNet' },
-  { code: 'benefit', name: 'Benefit' },
-  { code: 'tabby', name: 'Tabby' },
-  { code: 'tamara', name: 'Tamara' },
-  { code: 'valu', name: 'ValU' },
-  { code: 'apple_pay', name: 'Apple Pay' },
-  { code: 'stc_pay', name: 'STC Pay' },
+export const PAYMOB_METHODS = [
+  { code: 'card', name: 'Card' },
 ] satisfies ProviderMethod[];
 
 export const FAWATERAK_METHODS = [
@@ -61,6 +46,6 @@ export const FAWATERAK_METHODS = [
 export const PROVIDER_CATALOGUES = [
   { code: 'mock', name: 'Mock Provider', methods: MOCK_METHODS },
   { code: 'paytabs', name: 'PayTabs', methods: PAYTABS_METHODS },
-  { code: 'payfort', name: 'PayFort', methods: PAYFORT_METHODS },
+  { code: 'paymob', name: 'Paymob', methods: PAYMOB_METHODS },
   { code: 'fawaterak', name: 'Fawaterak', methods: FAWATERAK_METHODS },
 ] as const;

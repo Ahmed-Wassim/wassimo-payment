@@ -2,7 +2,7 @@ import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
-import { ApiError } from '../../common/api-error.ts';
+import { ApiError } from '../../common/errors/api-error.ts';
 import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
 import { attemptTransition } from './attempt-states.ts';
@@ -10,7 +10,7 @@ import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { Payment } from './entities/payment.entity.ts';
 import { transition } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
-import { isUuid } from '../../common/is-uuid.ts';
+import { isUuid } from '../../common/utils/is-uuid.ts';
 
 @Injectable()
 export class ResolutionService {
@@ -79,7 +79,7 @@ export class ResolutionService {
       }
       throw e;
     }
-    if (account.organizationId !== payment.organizationId) {
+    if (account.organization.id !== payment.organizationId) {
       throw new ApiError(
         'provider_account_not_found',
         HttpStatus.NOT_FOUND,
