@@ -37,6 +37,7 @@ export const PAYTABS_METHODS = [
 
 export const PAYMOB_METHODS = [
   { code: 'card', name: 'Card' },
+  { code: 'mobile_wallet', name: 'Mobile Wallet' },
 ] satisfies ProviderMethod[];
 
 export const FAWATERAK_METHODS = [
