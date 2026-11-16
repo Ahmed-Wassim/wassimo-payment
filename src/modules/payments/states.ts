@@ -13,3 +13,8 @@ export function transition(from: PaymentStatus, to: PaymentStatus): void {
     throw new Error(`illegal payment transition ${from}->${to}`);
   }
 }
+
+export function recoveryTransition(from: PaymentStatus, to: PaymentStatus): void {
+  if (from === 'failed' && to === 'succeeded') return;
+  transition(from, to);
+}

@@ -206,7 +206,11 @@ export class PaymobAdapter implements ProviderAdapter {
 
     if (!this.validHmac(tx, creds.hmac_secret, hmac)) return null;
 
-    // Trust anchor: re-query the transaction to confirm status
+    const orderStillOpen = this.orderStillOpen(tx);
+    let result = this.txResult(tx);
+    if (result === 'failed' && orderStillOpen) return null;
+
+    // Trust anchor: re-query the order to confirm the latest transaction state
     try {
       const ctx = await this.context(providerReference);
       const base = String(ctx.config.base_url || 'https://accept.paymob.com').replace(/\/$/, '');
@@ -214,16 +218,19 @@ export class PaymobAdapter implements ProviderAdapter {
       const inquired = await this.inquiry(base, authToken, providerReference);
       if (inquired) {
         const inquiredResult = this.txResult(inquired);
-        if (inquiredResult !== 'unknown') {
-          return { providerEventId: tx.id != null ? String(tx.id) : null, eventType: `transaction.${inquiredResult}`, result: inquiredResult, providerReference, raw: body };
+        if (inquiredResult !== 'unknown' && !(inquiredResult === 'failed' && orderStillOpen)) {
+          result = inquiredResult;
         }
       }
     } catch {
       // fall through to HMAC-verified result
     }
 
-    const result = this.txResult(tx);
     return { providerEventId: tx.id != null ? String(tx.id) : null, eventType: `transaction.${result}`, result, providerReference, raw: body };
+  }
+
+  private orderStillOpen(tx: any): boolean {
+    return String(tx.order?.payment_status || '').toUpperCase() === 'UNPAID' && tx.order?.is_canceled !== true;
   }
 
   private async context(providerReference: string) {

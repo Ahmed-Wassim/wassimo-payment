@@ -15,3 +15,11 @@ export function attemptTransition(
     throw new Error(`illegal attempt transition ${from}->${to}`);
   }
 }
+
+export function attemptRecoveryTransition(
+  from: AttemptStatus,
+  to: AttemptStatus,
+): void {
+  if (from === 'failed' && to === 'succeeded') return;
+  attemptTransition(from, to);
+}

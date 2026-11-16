@@ -5,10 +5,10 @@ import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
 import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
-import { attemptTransition } from './attempt-states.ts';
+import { attemptRecoveryTransition } from './attempt-states.ts';
 import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { Payment } from './entities/payment.entity.ts';
-import { transition } from './states.ts';
+import { recoveryTransition, transition } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
 
@@ -40,7 +40,7 @@ export class ResolutionService {
       );
     }
 
-    if (payment.status !== 'created' && payment.status !== 'processing') {
+    if (payment.status === 'succeeded' || payment.status === 'expired') {
       throw new ApiError(
         'nothing_to_resolve',
         HttpStatus.CONFLICT,
@@ -48,11 +48,12 @@ export class ResolutionService {
       );
     }
 
+    const recoverable = payment.status === 'failed';
     const attempt = await this.attempts
       .createQueryBuilder('a')
       .where('a.paymentId = :pid', { pid: payment.id })
       .andWhere('a.status IN (:...statuses)', {
-        statuses: ['unknown', 'initiated'],
+        statuses: recoverable ? ['failed'] : ['unknown', 'initiated'],
       })
       .orderBy("CASE WHEN a.status = 'unknown' THEN 0 ELSE 1 END")
       .addOrderBy('a.createdAt', 'ASC')
@@ -101,12 +102,15 @@ export class ResolutionService {
     if (outcome !== 'succeeded' && outcome !== 'failed') {
       return payment;
     }
+    if (outcome === 'failed' && payment.status === 'failed') {
+      return payment;
+    }
 
     return this.attempts.manager.transaction(async (tx) => {
       const attemptRow = await tx.findOneByOrFail(PaymentAttempt, {
         id: attempt.id,
       });
-      attemptTransition(attemptRow.status, outcome);
+      attemptRecoveryTransition(attemptRow.status, outcome);
       await tx.update(
         PaymentAttempt,
         { id: attemptRow.id },
@@ -121,8 +125,7 @@ export class ResolutionService {
       }
 
       const current = fresh.status === 'created' ? 'processing' : fresh.status;
-      transition(current, outcome);
-
+      recoveryTransition(current, outcome);
       if (outcome === 'succeeded') {
         await tx.update(
           Payment,
