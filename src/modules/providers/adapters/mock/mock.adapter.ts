@@ -54,7 +54,10 @@ export class MockAdapter implements ProviderAdapter {
       input.currency,
     );
     if (session.lost) {
-      throw new ProviderTimeoutError('mock refund response lost (MOCK_REFUND_MODE=lost-response)');
+      throw new ProviderTimeoutError(
+        'mock refund response lost (MOCK_REFUND_MODE=lost-response)',
+        session.sessionRef,
+      );
     }
     return { providerRef: session.sessionRef };
   }

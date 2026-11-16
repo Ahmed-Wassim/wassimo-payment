@@ -96,7 +96,12 @@ export class RefundsService {
       refundRef = result.providerRef;
       outcome = 'succeeded';
     } catch (e) {
-      outcome = e instanceof ProviderTimeoutError ? 'unknown' : 'failed';
+      if (e instanceof ProviderTimeoutError) {
+        outcome = 'unknown';
+        refundRef = e.providerRef ?? null;
+      } else {
+        outcome = 'failed';
+      }
     }
 
     return this.dataSource.transaction(async (tx) => {

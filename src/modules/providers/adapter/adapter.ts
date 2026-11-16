@@ -1,7 +1,10 @@
 export class ProviderTimeoutError extends Error {
-  constructor(message = 'provider request timed out') {
+  providerRef?: string;
+
+  constructor(message = 'provider request timed out', providerRef?: string) {
     super(message);
     this.name = 'ProviderTimeoutError';
+    this.providerRef = providerRef;
   }
 }
 
