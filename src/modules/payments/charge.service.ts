@@ -134,10 +134,10 @@ export class ChargeService {
         diagnostics = { phase: 'createCheckout', error: 'timeout' };
       } else if (e instanceof ProviderConfigError) {
         outcome = 'failed';
-        diagnostics = { phase: 'createCheckout', error: 'provider_config' };
+        diagnostics = { phase: 'createCheckout', error: 'provider_config', message: e.message };
       } else {
         outcome = 'failed';
-        diagnostics = { phase: 'createCheckout', error: 'provider_error' };
+        diagnostics = { phase: 'createCheckout', error: 'provider_error', message: e instanceof Error ? e.message : String(e) };
       }
     }
 

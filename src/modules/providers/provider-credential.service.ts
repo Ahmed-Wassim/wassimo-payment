@@ -30,7 +30,10 @@ export class ProviderCredentialService {
     accountId: string,
     payload: Record<string, string>,
   ): Promise<void> {
-    const account = await this.accounts.findOne({ where: { id: accountId } });
+    const account = await this.accounts.findOne({
+      where: { id: accountId },
+      relations: { organization: true },
+    });
     if (
       !account ||
       (!actor.isSuperAdmin && account.organization.id !== actor.organizationId)
