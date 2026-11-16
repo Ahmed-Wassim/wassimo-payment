@@ -1,4 +1,4 @@
-import { ProviderAccount } from '../entities/provider-account.entity.ts';
+import { ProviderAccount, ProviderAccountStatus, ProviderEnvironment } from '../entities/provider-account.entity.ts';
 import { toOrganizationModel, OrganizationModel } from '../../organizations/mappers/organization.mapper.ts';
 import { toApplicationModel, ApplicationModel } from '../../applications/mappers/application.mapper.ts';
 
@@ -7,9 +7,9 @@ export class ProviderAccountModel {
   organization!: OrganizationModel;
   application!: ApplicationModel;
   providerCode!: string;
-  environment!: string;
+  environment!: ProviderEnvironment;
   displayName!: string;
-  status!: string;
+  status!: ProviderAccountStatus;
   supportedCurrencies!: string[];
   supportedMethods!: string[];
   config!: Record<string, unknown>;

@@ -27,7 +27,7 @@ export class OrganizationsService {
     return rows.map((row) => toOrganizationModel(row));
   }
 
-  async create(dto: { slug: string; name: string; status?: string }) {
+  async create(dto: { slug: string; name: string; status?: OrganizationStatus }) {
     const exists = await this.repo.findOne({ where: { slug: dto.slug } });
     if (exists) {
       throw new ConflictException(`Organization already exists: ${dto.slug}`);

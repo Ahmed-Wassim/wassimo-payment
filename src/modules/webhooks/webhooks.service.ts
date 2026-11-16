@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiError } from '../../common/errors/api-error.ts';
+import { ProviderResult } from '../providers/adapter/adapter.ts';
 import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { attemptTransition } from '../payments/attempt-states.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
@@ -117,7 +118,7 @@ export class WebhooksService {
   private async applyEvent(
     rowId: string,
     attempt: PaymentAttempt | null,
-    target: 'succeeded' | 'failed' | null,
+    target: Exclude<ProviderResult, 'pending' | 'unknown'> | null,
   ): Promise<WebhookEventStatus> {
     if (!attempt || !target) {
       const reason = !attempt ? 'unmatched_reference' : 'event_carries_no_outcome';

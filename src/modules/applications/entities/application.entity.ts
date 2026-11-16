@@ -9,6 +9,8 @@ import {
 } from 'typeorm';
 import { Organization } from '../../organizations/entities/organization.entity.ts';
 
+export type ApplicationStatus = 'active' | 'disabled';
+
 @Entity('applications')
 export class Application {
   @PrimaryGeneratedColumn('uuid')
@@ -25,7 +27,7 @@ export class Application {
   name!: string;
 
   @Column({ type: 'varchar', length: 255, default: 'active' })
-  status!: string;
+  status!: ApplicationStatus;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;

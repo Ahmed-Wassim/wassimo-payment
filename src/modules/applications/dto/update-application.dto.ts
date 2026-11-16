@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import type { ApplicationStatus } from '../entities/application.entity.ts';
 
 export class UpdateApplicationDto {
   @IsOptional()
@@ -8,8 +9,6 @@ export class UpdateApplicationDto {
   name?: string;
 
   @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(255)
-  status?: string;
+  @IsIn(['active', 'disabled'])
+  status?: ApplicationStatus;
 }

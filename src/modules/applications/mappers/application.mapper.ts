@@ -1,11 +1,11 @@
-import { Application } from '../entities/application.entity.ts';
+import { Application, ApplicationStatus } from '../entities/application.entity.ts';
 import { toOrganizationModel, OrganizationModel } from '../../organizations/mappers/organization.mapper.ts';
 
 export class ApplicationModel {
   id!: string;
   slug!: string;
   name!: string;
-  status!: string;
+  status!: ApplicationStatus;
   organization!: OrganizationModel | null;
   createdAt!: Date;
   updatedAt!: Date;

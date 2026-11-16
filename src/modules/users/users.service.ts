@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './entities/user.entity.ts';
+import { User, UserStatus } from './entities/user.entity.ts';
 import { In, IsNull, Repository } from 'typeorm';
 import { OrgMembership } from './entities/org-membership.entity.ts';
 import { Role } from './entities/role.entity.ts';
@@ -272,8 +272,8 @@ export class UsersService {
   async updateMemberForActor(
     actor: { organizationId: string | null; isSuperAdmin: boolean },
     userId: string,
-    dto: { roleId?: string; status?: 'active' | 'disabled' },
-  ): Promise<{ id: string; roleId: string; status: string }> {
+    dto: { roleId?: string; status?: UserStatus },
+  ): Promise<{ id: string; roleId: string; status: UserStatus }> {
     if (!isUuid(userId)) {
       throw new BadRequestException('malformed user id');
     }

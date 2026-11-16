@@ -1,4 +1,4 @@
-import { ApiCredential } from '../entities/api-credential.entity.ts';
+import { ApiCredential, CredentialEnvironment, CredentialStatus } from '../entities/api-credential.entity.ts';
 import { toApplicationModel, ApplicationModel } from '../../applications/mappers/application.mapper.ts';
 
 export class CredentialModel {
@@ -6,9 +6,9 @@ export class CredentialModel {
   application!: ApplicationModel;
   keyId!: string;
   prefix!: string;
-  environment!: string;
+  environment!: CredentialEnvironment;
   scopes!: string[];
-  status!: string;
+  status!: CredentialStatus;
   lastUsedAt!: Date | null;
   revokedAt!: Date | null;
   createdAt!: Date;
