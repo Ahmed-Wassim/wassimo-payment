@@ -3,7 +3,7 @@ import { AppModule } from './app.module.js';
 import { APP_CONFIG } from './config/config.module.ts';
 import { AppConfig } from './config/configuration.ts';
 import { ValidationPipe } from '@nestjs/common';
-import { ApiErrorFilter } from './common/api-error.filter.ts';
+import { ApiErrorFilter } from './common/errors/api-error.filter.ts';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });

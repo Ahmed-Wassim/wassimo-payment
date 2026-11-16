@@ -8,7 +8,7 @@ import { EntityManager, Repository } from 'typeorm';
 import { Customer } from './entities/customer.entity.ts';
 import { toCustomerModel, CustomerModel } from './mappers/customer.mapper.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
-import { isUuid } from '../../common/is-uuid.ts';
+import { isUuid } from '../../common/utils/is-uuid.ts';
 
 type Actor = { organizationId: string | null; isSuperAdmin: boolean };
 

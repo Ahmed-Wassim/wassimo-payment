@@ -1,8 +1,8 @@
 import { Body, Controller, HttpStatus, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiKeyGuard } from '../auth/api-key.guard.ts';
 import { AuthContext } from '../auth/auth-context.ts';
-import { ApiError } from '../../common/api-error.ts';
-import { isUuid } from '../../common/is-uuid.ts';
+import { ApiError } from '../../common/errors/api-error.ts';
+import { isUuid } from '../../common/utils/is-uuid.ts';
 import { CreateRefundDto } from './dto/create-refund.dto.ts';
 import { RefundsService } from './refunds.service.ts';
 import { toRefundModel } from './mappers/refund.mapper.ts';

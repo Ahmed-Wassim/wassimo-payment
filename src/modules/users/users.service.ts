@@ -13,7 +13,7 @@ import { Permission } from './entities/permission.entity.ts';
 import { RolePermission } from './entities/role-permission.entity.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { toPermissionModel } from '../permissions/mappers/permission.mapper.ts';
-import { isUuid } from '../../common/is-uuid.ts';
+import { isUuid } from '../../common/utils/is-uuid.ts';
 
 @Injectable()
 export class UsersService {

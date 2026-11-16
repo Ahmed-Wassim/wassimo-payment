@@ -11,14 +11,14 @@ import {
 } from '@nestjs/common';
 import { ApiKeyGuard } from '../auth/api-key.guard.ts';
 import { AuthContext } from '../auth/auth-context.ts';
-import { ApiError } from '../../common/api-error.ts';
+import { ApiError } from '../../common/errors/api-error.ts';
 import { IdempotencyService } from '../idempotency/idempotency.service.ts';
 import { ChargeService } from './charge.service.ts';
 import { ResolutionService } from './resolution.service.ts';
 import { PaymentsService } from './payments.service.ts';
 import { toPaymentModel } from './mappers/payment.mapper.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
-import { isUuid } from '../../common/is-uuid.ts';
+import { isUuid } from '../../common/utils/is-uuid.ts';
 
 @Controller()
 @UseGuards(ApiKeyGuard)

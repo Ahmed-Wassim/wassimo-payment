@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'node:crypto';
 import { EntityManager, Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
-import { ApiError } from '../../common/api-error.ts';
+import { ApiError } from '../../common/errors/api-error.ts';
 import { CreatePaymentDto } from '../payments/dto/create-payment.dto.ts';
 import { IdempotencyKey } from './entities/idempotency-key.entity.ts';
 
