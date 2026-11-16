@@ -9,7 +9,7 @@ import {
 } from '../providers/adapter/adapter.ts';
 import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
-import { attemptTransition } from './attempt-states.ts';
+import { attemptTransition, ChargeOutcome } from './attempt-states.ts';
 import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { Payment } from './entities/payment.entity.ts';
 import { transition } from './states.ts';
@@ -114,7 +114,7 @@ export class ChargeService {
 
     let providerReference: string | null = null;
     let redirectUrl: string | null = null;
-    let outcome: 'none' | 'unknown' | 'failed' = 'none';
+    let outcome: ChargeOutcome = 'none';
     let diagnostics: Record<string, unknown> = {};
 
     try {

@@ -28,8 +28,12 @@ export interface CheckoutResult {
   redirectUrl: string;
 }
 
+export type ProviderResult = 'succeeded' | 'failed' | 'pending' | 'unknown';
+
+export type ProviderOutcomeResult = Exclude<ProviderResult, 'pending'>;
+
 export interface Outcome {
-  result: 'succeeded' | 'failed' | 'unknown';
+  result: ProviderOutcomeResult;
 }
 
 export interface RefundInput {
@@ -46,7 +50,7 @@ export interface RefundResult {
 export interface ProviderEvent {
   providerEventId: string | null;
   eventType: string;
-  result: 'succeeded' | 'failed' | 'pending' | 'unknown';
+  result: ProviderResult;
   providerReference: string | null;
   raw: unknown;
 }

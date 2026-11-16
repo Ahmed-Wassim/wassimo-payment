@@ -1,5 +1,7 @@
 export type AttemptStatus = 'initiated' | 'succeeded' | 'failed' | 'unknown';
 
+export type ChargeOutcome = 'none' | 'unknown' | 'failed';
+
 export const ATTEMPT_ALLOWED: Record<AttemptStatus, AttemptStatus[]> = {
   initiated: ['succeeded', 'failed', 'unknown'],
   unknown: ['succeeded', 'failed'],

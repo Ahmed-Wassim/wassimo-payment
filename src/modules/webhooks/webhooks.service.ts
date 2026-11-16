@@ -7,7 +7,7 @@ import { attemptTransition } from '../payments/attempt-states.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { Payment } from '../payments/entities/payment.entity.ts';
 import { transition } from '../payments/states.ts';
-import { WebhookEvent } from './entities/webhook-event.entity.ts';
+import { WebhookEvent, WebhookEventStatus, WebhookIngestStatus } from './entities/webhook-event.entity.ts';
 
 @Injectable()
 export class WebhooksService {
@@ -24,7 +24,7 @@ export class WebhooksService {
     headers: Record<string, string>,
     rawBody: Buffer,
     query: Record<string, string | string[] | undefined>,
-  ): Promise<{ status: string }> {
+  ): Promise<{ status: WebhookIngestStatus }> {
     const adapter = await this.factory.forProviderCode(providerCode);
 
     const event = await adapter.verifyWebhook(headers, rawBody, query);
@@ -69,7 +69,7 @@ export class WebhooksService {
         ? event.result
         : null;
 
-    const status = await this.applyEvent(row.id, attempt, target);
+    const status: WebhookEventStatus = await this.applyEvent(row.id, attempt, target);
     return { status };
   }
 
@@ -97,7 +97,7 @@ export class WebhooksService {
       return this.events.findOneByOrFail({ id: inserted[0].id });
     }
 
-    const existing: Array<{ id: string; status: string }> =
+    const existing: Array<{ id: string; status: WebhookEventStatus }> =
       await this.events.query(
         `SELECT id, status FROM webhook_events
           WHERE provider_event_id = $1
@@ -118,7 +118,7 @@ export class WebhooksService {
     rowId: string,
     attempt: PaymentAttempt | null,
     target: 'succeeded' | 'failed' | null,
-  ): Promise<string> {
+  ): Promise<WebhookEventStatus> {
     if (!attempt || !target) {
       const reason = !attempt ? 'unmatched_reference' : 'event_carries_no_outcome';
       await this.events.update(
@@ -164,7 +164,7 @@ export class WebhooksService {
         }
       }
 
-      const status = refusals.length ? 'ignored' : 'processed';
+      const status: WebhookEventStatus = refusals.length ? 'ignored' : 'processed';
       await tx.update(WebhookEvent, { id: rowId }, {
         status,
         error: refusals.length ? refusals.join('; ') : null,

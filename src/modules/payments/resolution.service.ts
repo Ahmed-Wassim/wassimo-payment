@@ -3,12 +3,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
+import { ProviderOutcomeResult } from '../providers/adapter/adapter.ts';
 import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
-import { attemptRecoveryTransition } from './attempt-states.ts';
+import { attemptRecoveryTransition, AttemptStatus } from './attempt-states.ts';
 import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { Payment } from './entities/payment.entity.ts';
-import { recoveryTransition, transition } from './states.ts';
+import { PaymentStatus, recoveryTransition, transition } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
 
@@ -49,11 +50,14 @@ export class ResolutionService {
     }
 
     const recoverable = payment.status === 'failed';
+    const selectableStatuses: AttemptStatus[] = recoverable
+      ? ['failed']
+      : ['unknown', 'initiated'];
     const attempt = await this.attempts
       .createQueryBuilder('a')
       .where('a.paymentId = :pid', { pid: payment.id })
       .andWhere('a.status IN (:...statuses)', {
-        statuses: recoverable ? ['failed'] : ['unknown', 'initiated'],
+        statuses: selectableStatuses,
       })
       .orderBy("CASE WHEN a.status = 'unknown' THEN 0 ELSE 1 END")
       .addOrderBy('a.createdAt', 'ASC')
@@ -90,7 +94,7 @@ export class ResolutionService {
 
     const adapter = await this.factory.forAccount(account);
 
-    let outcome: 'succeeded' | 'failed' | 'unknown' = 'unknown';
+    let outcome: ProviderOutcomeResult = 'unknown';
     if (attempt.providerReference) {
       try {
         outcome = (await adapter.queryStatus(attempt.providerReference)).result;
@@ -124,7 +128,8 @@ export class ResolutionService {
         await tx.update(Payment, { id: payment.id }, { status: 'processing' });
       }
 
-      const current = fresh.status === 'created' ? 'processing' : fresh.status;
+      const current: PaymentStatus =
+        fresh.status === 'created' ? 'processing' : fresh.status;
       recoveryTransition(current, outcome);
       if (outcome === 'succeeded') {
         await tx.update(

@@ -6,6 +6,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+export type OrganizationStatus = 'active' | 'disabled';
+
 @Entity('organizations')
 export class Organization {
   @PrimaryGeneratedColumn('uuid')
@@ -21,7 +23,7 @@ export class Organization {
   isPlatform!: boolean;
 
   @Column({ type: 'varchar', length: 255, default: 'active' })
-  status!: string;
+  status!: OrganizationStatus;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt!: Date;

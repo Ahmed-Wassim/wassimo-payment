@@ -1,11 +1,13 @@
 import { Transform } from 'class-transformer';
 import {
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
 } from 'class-validator';
+import type { OrganizationStatus } from '../entities/organization.entity.ts';
 
 export class CreateOrganizationDto {
   @Transform(({ value }) =>
@@ -25,7 +27,6 @@ export class CreateOrganizationDto {
   name!: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  status?: string;
+  @IsIn(['active', 'disabled'])
+  status?: OrganizationStatus;
 }

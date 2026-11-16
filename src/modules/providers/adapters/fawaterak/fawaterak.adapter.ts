@@ -10,6 +10,7 @@ import {
   ProviderAdapter,
   ProviderEvent,
   ProviderConfigError,
+  ProviderResult,
   RefundInput,
   RefundResult,
 } from '../../adapter/adapter.ts';
@@ -187,7 +188,7 @@ export class FawaterakAdapter implements ProviderAdapter {
     };
   }
 
-  private outcomeFromTransaction(tx: any, fallbackStatus: string): 'succeeded' | 'failed' | 'pending' | 'unknown' {
+  private outcomeFromTransaction(tx: any, fallbackStatus: string): ProviderResult {
     const paid = tx?.paid;
     if (paid === 1 || paid === '1' || paid === true) return 'succeeded';
     const status = String(tx?.status_text || tx?.status || fallbackStatus || '').toLowerCase();

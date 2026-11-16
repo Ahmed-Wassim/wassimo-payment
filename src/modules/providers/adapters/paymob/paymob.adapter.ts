@@ -9,6 +9,7 @@ import {
   ProviderAdapter,
   ProviderEvent,
   ProviderConfigError,
+  ProviderResult,
   RefundInput,
   RefundResult,
 } from '../../adapter/adapter.ts';
@@ -102,7 +103,7 @@ export class PaymobAdapter implements ProviderAdapter {
     return { providerRef: String(data?.id || transactionId) };
   }
 
-  private txResult(tx: any): 'succeeded' | 'failed' | 'pending' | 'unknown' {
+  private txResult(tx: any): ProviderResult {
     if (tx.success && !tx.pending) return 'succeeded';
     if (!tx.success && !tx.pending) return 'failed';
     if (tx.pending) return 'pending';

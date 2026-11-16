@@ -1,11 +1,11 @@
-import { Organization } from '../entities/organization.entity.ts';
+import { Organization, OrganizationStatus } from '../entities/organization.entity.ts';
 
 export class OrganizationModel {
   id!: string;
   slug!: string;
   name!: string;
   isPlatform!: boolean;
-  status!: string;
+  status!: OrganizationStatus;
   createdAt!: Date;
   updatedAt!: Date;
 }

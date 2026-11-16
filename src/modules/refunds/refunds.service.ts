@@ -8,7 +8,7 @@ import { PaymentProviderFactory } from '../providers/factories/payment-provider.
 import { ProvidersService } from '../providers/providers.service.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { PaymentsService } from '../payments/payments.service.ts';
-import { ProviderTimeoutError } from '../providers/adapter/adapter.ts';
+import { ProviderOutcomeResult, ProviderTimeoutError } from '../providers/adapter/adapter.ts';
 import { refundTransition, type RefundStatus } from './refund-states.ts';
 import { Refund } from './entities/refund.entity.ts';
 
@@ -85,7 +85,7 @@ export class RefundsService {
     );
 
     let refundRef: string | null = null;
-    let outcome: 'succeeded' | 'failed' | 'unknown' = 'unknown';
+    let outcome: ProviderOutcomeResult = 'unknown';
     try {
       const result = await adapter.refund({
         paymentId: payment.id,
@@ -101,7 +101,7 @@ export class RefundsService {
 
     return this.dataSource.transaction(async (tx) => {
       const row = await tx.findOneByOrFail(Refund, { id: refund.id });
-      refundTransition(row.status as RefundStatus, 'processing');
+      refundTransition(row.status, 'processing');
       refundTransition('processing', outcome);
       await tx.update(Refund, { id: row.id }, { status: outcome, providerRef: refundRef });
       let raceLost = false;
@@ -154,7 +154,7 @@ export class RefundsService {
 
     return this.dataSource.transaction(async (tx) => {
       const row = await tx.findOneByOrFail(Refund, { id: refund.id });
-      refundTransition(row.status as RefundStatus, outcome);
+      refundTransition(row.status, outcome);
       await tx.update(Refund, { id: row.id }, { status: outcome });
       let raceLost = false;
       if (outcome === 'succeeded') {

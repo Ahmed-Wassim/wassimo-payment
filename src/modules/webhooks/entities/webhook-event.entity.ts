@@ -5,6 +5,10 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+export type WebhookEventStatus = 'pending' | 'processed' | 'ignored';
+
+export type WebhookIngestStatus = WebhookEventStatus | 'duplicate';
+
 @Entity('webhook_events')
 export class WebhookEvent {
   @PrimaryGeneratedColumn('uuid')
@@ -23,7 +27,7 @@ export class WebhookEvent {
   rawPayload!: Record<string, unknown>;
 
   @Column({ type: 'text', default: 'pending' })
-  status!: string;
+  status!: WebhookEventStatus;
 
   @Column({ type: 'text', nullable: true })
   error!: string | null;

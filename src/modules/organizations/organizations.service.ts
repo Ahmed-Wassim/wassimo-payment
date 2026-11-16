@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization } from './entities/organization.entity.ts';
+import { OrganizationStatus } from './entities/organization.entity.ts';
 import { Application } from '../applications/entities/application.entity.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { toOrganizationModel } from './mappers/organization.mapper.ts';
@@ -35,7 +36,7 @@ export class OrganizationsService {
     const org = this.repo.create({
       slug: dto.slug,
       name: dto.name,
-      status: dto.status ?? 'active',
+      status: (dto.status ?? 'active') as OrganizationStatus,
       isPlatform: false,
     });
 
@@ -81,7 +82,7 @@ export class OrganizationsService {
     return this.repo.findOne({ where: { slug } });
   }
 
-  async update(id: string, dto: { name?: string; status?: string }) {
+  async update(id: string, dto: { name?: string; status?: OrganizationStatus }) {
     const org = await this.requireById(id);
 
     if (dto.name !== undefined) org.name = dto.name;
