@@ -40,7 +40,10 @@ export class CreateProviderAccountDto {
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })
-  @Matches(/^[a-z][a-z-]*$/, { each: true, message: 'methods must be lowercase kebab words' })
+  @Matches(/^[a-z][a-z0-9_-]*$/, {
+    each: true,
+    message: 'methods must be lowercase words with hyphens or underscores',
+  })
   supportedMethods!: string[];
 
   @IsOptional()
