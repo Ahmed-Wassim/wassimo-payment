@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -56,7 +57,7 @@ export class OrganizationsController {
   }
 
   @Delete(':id')
-  @HttpCode(204)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('org:update')
   remove(@Param('id') id: string) {

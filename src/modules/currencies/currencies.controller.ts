@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -45,7 +46,7 @@ export class CurrenciesController {
   }
 
   @Delete(':code')
-  @HttpCode(204)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('platform:orgs:read')
   async remove(@Param('code') code: string) {

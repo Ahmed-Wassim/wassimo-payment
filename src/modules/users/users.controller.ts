@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   HttpCode,
+  HttpStatus,
   Req,
   UseGuards,
   Param,
@@ -55,7 +56,7 @@ export class UsersController {
   }
 
   @Delete('roles/:id')
-  @HttpCode(204)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @Permission('org:members:manage')
   async removeRole(
     @Req() req: { actor: ActorContext },

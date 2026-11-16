@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -87,7 +88,7 @@ export class ProvidersController {
   }
 
   @Delete('provider-accounts/:id')
-  @HttpCode(204)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('org:members:manage')
   async removeAccount(
@@ -98,7 +99,7 @@ export class ProvidersController {
   }
 
   @Post('provider-accounts/:id/credentials')
-  @HttpCode(204)
+  @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('org:members:manage')
   async setCredentials(
