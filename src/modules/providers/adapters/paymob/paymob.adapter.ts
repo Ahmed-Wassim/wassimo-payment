@@ -18,6 +18,8 @@ import { ProviderCredentialService } from '../../provider-credential.service.ts'
 export class PaymobAdapter implements ProviderAdapter {
   readonly providerCode = PROVIDER_CODE.Paymob;
 
+  private authTokenCache: { token: string; expiresAt: number } | null = null;
+
   constructor(
     private readonly credentialsService: ProviderCredentialService,
     private readonly attempts: Repository<PaymentAttempt>,
@@ -67,8 +69,34 @@ export class PaymobAdapter implements ProviderAdapter {
     return { result: result === 'pending' ? 'unknown' : result };
   }
 
-  async refund(_input: RefundInput): Promise<RefundResult> {
-    throw new ProviderConfigError('paymob refund: not implemented');
+  async refund(input: RefundInput): Promise<RefundResult> {
+    if (!this.bound) throw new ProviderConfigError('paymob: not bound');
+    const ctx = await this.context(input.providerReference);
+    const base = String(ctx.config.base_url || 'https://accept.paymob.com').replace(/\/$/, '');
+    const token = await this.authToken(base, ctx.credentials.api_key);
+
+    // Look up the transaction to get the transaction id
+    const tx = await this.inquiry(base, token, input.providerReference);
+    const transactionId = tx?.id;
+    if (!transactionId) {
+      throw new ProviderConfigError('paymob refund: transaction id not found');
+    }
+
+    const amountCents = Number(input.amountMinor);
+    const res = await fetch(`${base}/api/acceptance/void_refund/refund`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        auth_token: token,
+        transaction_id: transactionId,
+        amount_cents: amountCents,
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as any;
+    if (!res.ok) {
+      throw new ProviderConfigError(`paymob refund: ${res.status} ${data?.message || ''}`);
+    }
+    return { providerRef: String(data?.id || transactionId) };
   }
 
   private txResult(tx: any): 'succeeded' | 'failed' | 'pending' | 'unknown' {
@@ -91,8 +119,8 @@ export class PaymobAdapter implements ProviderAdapter {
 
   private billingData(customer: any) {
     const parts = String(customer.name || '').trim().split(/\s+/);
-    const first_name = parts[0] || 'NA';
-    const last_name = parts.slice(1).join(' ') || '.';
+    const first_name = parts[0] || '';
+    const last_name = parts.slice(1).join(' ');
     return {
       first_name,
       last_name,
@@ -101,8 +129,19 @@ export class PaymobAdapter implements ProviderAdapter {
       street: customer.street || 'NA',
       city: customer.city || 'NA',
       state: customer.state || 'NA',
-      country: String(customer.country || 'NA').toUpperCase(),
+      country: this.countryName(customer.country) || 'NA',
     };
+  }
+
+  private countryName(code: string | null | undefined): string {
+    const map: Record<string, string> = {
+      EG: 'Egypt', SA: 'Saudi Arabia', AE: 'United Arab Emirates', KW: 'Kuwait',
+      BH: 'Bahrain', OM: 'Oman', QA: 'Qatar', JO: 'Jordan', LB: 'Lebanon',
+      MA: 'Morocco', TN: 'Tunisia', DZ: 'Algeria', US: 'United States',
+      GB: 'United Kingdom', DE: 'Germany', FR: 'France',
+    };
+    const upper = String(code || '').toUpperCase();
+    return map[upper] || upper || 'NA';
   }
 
   private checkoutUrl(config: any, publicKey: string, clientSecret: string): string {
@@ -111,12 +150,17 @@ export class PaymobAdapter implements ProviderAdapter {
   }
 
   private async authToken(base: string, apiKey: string): Promise<string> {
+    const now = Date.now();
+    if (this.authTokenCache && this.authTokenCache.expiresAt > now) {
+      return this.authTokenCache.token;
+    }
     const res = await fetch(`${base}/api/auth/tokens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ api_key: apiKey }),
     });
     const data = (await res.json()) as any;
+    this.authTokenCache = { token: data.token, expiresAt: now + 50 * 60 * 1000 };
     return data.token;
   }
 
@@ -158,6 +202,22 @@ export class PaymobAdapter implements ProviderAdapter {
     if (!creds?.hmac_secret) return null;
 
     if (!this.validHmac(tx, creds.hmac_secret, hmac)) return null;
+
+    // Trust anchor: re-query the transaction to confirm status
+    try {
+      const ctx = await this.context(providerReference);
+      const base = String(ctx.config.base_url || 'https://accept.paymob.com').replace(/\/$/, '');
+      const authToken = await this.authToken(base, ctx.credentials.api_key);
+      const inquired = await this.inquiry(base, authToken, providerReference);
+      if (inquired) {
+        const inquiredResult = this.txResult(inquired);
+        if (inquiredResult !== 'unknown') {
+          return { providerEventId: tx.id != null ? String(tx.id) : null, eventType: `transaction.${inquiredResult}`, result: inquiredResult, providerReference, raw: body };
+        }
+      }
+    } catch {
+      // fall through to HMAC-verified result
+    }
 
     const result = this.txResult(tx);
     return { providerEventId: tx.id != null ? String(tx.id) : null, eventType: `transaction.${result}`, result, providerReference, raw: body };

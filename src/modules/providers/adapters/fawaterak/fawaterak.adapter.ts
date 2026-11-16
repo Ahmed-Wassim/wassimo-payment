@@ -19,6 +19,8 @@ import { ProviderCredentialService } from '../../provider-credential.service.ts'
 export class FawaterakAdapter implements ProviderAdapter {
   readonly providerCode = PROVIDER_CODE.Fawaterak;
 
+  private oauthTokenCache: { token: string; expiresAt: number } | null = null;
+
   constructor(
     private readonly currencies: CurrenciesService,
     private readonly credentialsService: ProviderCredentialService,
@@ -90,8 +92,31 @@ export class FawaterakAdapter implements ProviderAdapter {
     return { result: 'unknown' };
   }
 
-  async refund(_input: RefundInput): Promise<RefundResult> {
-    throw new ProviderConfigError('fawaterak refund: not implemented');
+  async refund(input: RefundInput): Promise<RefundResult> {
+    if (!this.bound) throw new ProviderConfigError('fawaterak: not bound');
+    const config = (this.bound.account.config ?? {}) as any;
+    const creds = this.bound.credentials;
+    const baseUrl = this.baseUrl(config);
+    const token = await this.accessToken(baseUrl, creds);
+
+    const currency = await this.currencies.requireEnabled(input.currency);
+    const amount = Number(this.currencies.minorToDecimal(input.amountMinor, currency.exponent));
+
+    const res = await fetch(`${baseUrl}/api/v3/refundTransaction`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        intent_key: input.providerReference,
+        amount,
+        currency: input.currency.toUpperCase(),
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as any;
+    if (!res.ok) {
+      throw new ProviderConfigError(`fawaterak refund: ${res.status} ${data?.message || ''}`);
+    }
+    const refundId = data?.data?.refund_id || data?.data?.id || data?.refund_id;
+    return { providerRef: String(refundId || input.providerReference) };
   }
 
   private async getTransaction(intentKey: string, config: any, credentials: Record<string, string>) {
@@ -111,7 +136,9 @@ export class FawaterakAdapter implements ProviderAdapter {
       return { config: (this.bound.account.config ?? {}) as any, credentials: this.bound.credentials };
     }
     const attempt = await this.attempts.findOne({ where: { providerReference } });
-    const account = await this.accounts.findOne({ where: { id: attempt!.providerAccountId } });
+    if (!attempt) throw new ProviderConfigError('fawaterak: attempt not found');
+    const account = await this.accounts.findOne({ where: { id: attempt.providerAccountId } });
+    if (!account) throw new ProviderConfigError('fawaterak: account not found');
     const credentials = await this.credentialsService.load(account!.id);
     return { config: (account!.config ?? {}) as any, credentials };
   }
@@ -139,15 +166,15 @@ export class FawaterakAdapter implements ProviderAdapter {
     if (!vendorKey) return null;
 
     const receivedHash = body.transactionHashKey || body.hashKey || body.hash_key;
-    if (receivedHash) {
-      const signed = `TransactionId=${transactionId ?? ''}&TransactionKey=${transactionKey}&PaymentMethod=${paymentMethod}`;
-      const expected = createHmac('sha256', vendorKey).update(signed).digest('hex');
-      if (!this.safeEqual(expected, String(receivedHash))) return null;
-    }
+    if (!receivedHash) return null;
+    const signed = `TransactionId=${transactionId ?? ''}&TransactionKey=${transactionKey}&PaymentMethod=${paymentMethod}`;
+    const expected = createHmac('sha256', vendorKey).update(signed).digest('hex');
+    if (!this.safeEqual(expected, String(receivedHash))) return null;
 
     const account = await this.accounts.findOne({ where: { id: attempt.providerAccountId } });
     if (!account) return null;
     const tx = await this.getTransaction(providerReference, account.config as any, creds as any).catch(() => null);
+    if (!tx) return null;
     const result = this.outcomeFromTransaction(tx, status);
     if (result === 'unknown') return null;
 
@@ -195,6 +222,11 @@ export class FawaterakAdapter implements ProviderAdapter {
   }
 
   private async accessToken(baseUrl: string, credentials: Record<string, string>): Promise<string> {
+    const now = Date.now();
+    const cacheKey = `${baseUrl}:${credentials.client_id}`;
+    if (this.oauthTokenCache && this.oauthTokenCache.expiresAt > now) {
+      return this.oauthTokenCache.token;
+    }
     const res = await fetch(`${baseUrl}/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -208,6 +240,8 @@ export class FawaterakAdapter implements ProviderAdapter {
     if (!res.ok || !data?.access_token) {
       throw new ProviderConfigError('fawaterak: failed to obtain access token');
     }
+    const expiresIn = typeof data.expires_in === 'number' ? data.expires_in : 3600;
+    this.oauthTokenCache = { token: data.access_token, expiresAt: now + (expiresIn - 60) * 1000 };
     return data.access_token;
   }
 }
