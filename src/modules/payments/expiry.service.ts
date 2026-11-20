@@ -29,33 +29,38 @@ export class ExpiryService implements OnModuleInit, OnModuleDestroy {
   }
 
   async sweep(): Promise<number> {
-    const expired = await this.dataSource.transaction(async (tx) => {
-      const rows = (await tx.query(
-        `UPDATE payments
-            SET status = 'expired', updated_at = NOW()
-          WHERE status = 'created'
-            AND created_at < NOW() - ($1::int * interval '1 second')
-            AND NOT EXISTS (
-                 SELECT 1 FROM payment_attempts a
-                  WHERE a.payment_id = payments.id)
-          RETURNING id, reference`,
-        [this.ttlSeconds],
-      )) as { id: string; reference: string }[];
+    try {
+      const expired = await this.dataSource.transaction(async (tx) => {
+        const rows = (await tx.query(
+          `UPDATE payments
+              SET status = 'expired', updated_at = NOW()
+            WHERE status = 'created'
+              AND created_at < NOW() - ($1::int * interval '1 second')
+              AND NOT EXISTS (
+                   SELECT 1 FROM payment_attempts a
+                    WHERE a.payment_id = payments.id)
+            RETURNING id, reference`,
+          [this.ttlSeconds],
+        )) as { id: string; reference: string }[];
 
-      for (const row of rows) {
-        await this.outbox.writeFailed(
-          tx,
-          { id: row.id, reference: row.reference },
-          { reason_code: 'expired' },
-        );
+        for (const row of rows) {
+          await this.outbox.writeFailed(
+            tx,
+            { id: row.id, reference: row.reference },
+            { reason_code: 'expired' },
+          );
+        }
+
+        return rows;
+      });
+
+      if (expired.length > 0) {
+        this.logger.log(`expired ${expired.length} abandoned uncharged payment(s)`);
       }
-
-      return rows;
-    });
-
-    if (expired.length > 0) {
-      this.logger.log(`expired ${expired.length} abandoned uncharged payment(s)`);
+      return expired.length;
+    } catch (err) {
+      this.logger.error('expiry sweep failed', err instanceof Error ? err.stack : String(err));
+      return 0;
     }
-    return expired.length;
   }
 }
