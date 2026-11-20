@@ -7,16 +7,6 @@ import type { AppConfig } from '../config/configuration.ts';
 import { EVENTS_EXCHANGE } from '../events/envelope.ts';
 import { OutboxEvent } from './entities/outbox-event.entity.ts';
 
-type ClaimedRow = {
-  id: string;
-  event_id: string;
-  event_type: string;
-  payload: Record<string, unknown>;
-  correlation_id: string;
-  occurred_at: Date;
-  attempts: number;
-};
-
 @Injectable()
 export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(OutboxPublisherService.name);
@@ -49,23 +39,31 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async claimBatch(limit: number): Promise<ClaimedRow[]> {
-    return (await this.outbox.query(
-      `WITH claimed AS (
-         SELECT id FROM outbox_events
-          WHERE status = 'pending' AND next_attempt_at <= now()
-          ORDER BY created_at LIMIT $1
-          FOR UPDATE SKIP LOCKED
-       )
-       UPDATE outbox_events o
-          SET next_attempt_at = now() + interval '30 seconds'
-         FROM claimed c WHERE o.id = c.id
-       RETURNING o.id, o.event_id, o.event_type, o.payload, o.correlation_id, o.occurred_at, o.attempts`,
-      [limit],
-    )) as ClaimedRow[];
+  private async claimBatch(limit: number): Promise<OutboxEvent[]> {
+    return this.outbox.manager.transaction(async (tx) => {
+      const batch = await tx
+        .createQueryBuilder(OutboxEvent, 'o')
+        .setLock('pessimistic_write')
+        .setOnLocked('skip_locked')
+        .where("o.status = 'pending' AND o.nextAttemptAt <= now()")
+        .orderBy('o.createdAt', 'ASC')
+        .take(limit)
+        .getMany();
+
+      if (batch.length) {
+        await tx
+          .createQueryBuilder()
+          .update(OutboxEvent)
+          .set({ nextAttemptAt: () => "now() + interval '30 seconds'" })
+          .whereInIds(batch.map((r) => r.id))
+          .execute();
+      }
+
+      return batch;
+    });
   }
 
-  private async publishBatch(rows: ClaimedRow[]): Promise<void> {
+  private async publishBatch(rows: OutboxEvent[]): Promise<void> {
     let conn: amqp.ChannelModel | undefined;
     let ch: amqp.ConfirmChannel | undefined;
 
@@ -85,9 +83,9 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
       try {
         ch.publish(
           EVENTS_EXCHANGE,
-          row.event_type,
+          row.eventType,
           Buffer.from(JSON.stringify(this.toEnvelope(row))),
-          { contentType: 'application/json', persistent: true, messageId: row.event_id },
+          { contentType: 'application/json', persistent: true, messageId: row.eventId },
         );
         await ch.waitForConfirms();
         await this.outbox.update({ id: row.id }, { status: 'published', publishedAt: new Date(), lastError: null });
@@ -99,27 +97,21 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
     await this.close(ch, conn);
   }
 
-  private async close(ch?: amqp.ConfirmChannel, conn?: amqp.ChannelModel): Promise<void> {
-    try { await ch?.close(); } catch {}
-    try { await conn?.close(); } catch {}
-  }
-
-  private toEnvelope(row: ClaimedRow) {
+  private toEnvelope(row: OutboxEvent) {
     return {
-      event_id: row.event_id,
-      event_type: row.event_type,
+      event_id: row.eventId,
+      event_type: row.eventType,
       version: '1',
-      occurred_at: new Date(row.occurred_at).toISOString(),
-      correlation_id: row.correlation_id,
+      occurred_at: row.occurredAt.toISOString(),
+      correlation_id: row.correlationId,
       producer: 'wassimo-payment',
       payload: row.payload,
     };
   }
 
-  private async markFailed(row: ClaimedRow, error: string): Promise<void> {
-    const attempts = (Number(row.attempts) || 0) + 1;
+  private async markFailed(row: OutboxEvent, error: string): Promise<void> {
+    const attempts = row.attempts + 1;
     const delay = Math.min(300, 2 ** attempts);
-    if (!row.id) return;
     await this.outbox.query(
       `UPDATE outbox_events
           SET status = 'pending', attempts = $2, last_error = $3,
@@ -127,6 +119,11 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
         WHERE id = $1`,
       [row.id, attempts, error.slice(0, 500), delay],
     );
+  }
+
+  private async close(ch?: amqp.ConfirmChannel, conn?: amqp.ChannelModel): Promise<void> {
+    try { await ch?.close(); } catch {}
+    try { await conn?.close(); } catch {}
   }
 
   private message(err: unknown): string {

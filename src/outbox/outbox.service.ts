@@ -22,12 +22,8 @@ type FailedPayment = {
 
 @Injectable()
 export class OutboxService {
-  async writeSucceeded(
-    tx: EntityManager,
-    payment: SucceededPayment,
-  ): Promise<void> {
+  async writeSucceeded(tx: EntityManager, payment: SucceededPayment): Promise<void> {
     const amountMinor = Number(payment.capturedMinor || payment.amountMinor);
-
     await tx.insert(OutboxEvent, {
       eventId: randomUUID(),
       eventType: PAYMENT_SUCCEEDED_EVENT,
@@ -37,7 +33,7 @@ export class OutboxService {
         amount_minor: amountMinor,
         currency: payment.currency,
       },
-      correlationId: payment.reference,
+      correlationId: payment.reference ?? payment.id,
       occurredAt: new Date(),
       status: 'pending',
       attempts: 0,
@@ -58,7 +54,7 @@ export class OutboxService {
         ...(reason?.reason_code ? { reason_code: reason.reason_code } : {}),
         ...(reason?.message ? { message: reason.message } : {}),
       },
-      correlationId: payment.reference,
+      correlationId: payment.reference ?? payment.id,
       occurredAt: new Date(),
       status: 'pending',
       attempts: 0,
