@@ -31,7 +31,7 @@ export class ExpiryService implements OnModuleInit, OnModuleDestroy {
   async sweep(): Promise<number> {
     try {
       const expired = await this.dataSource.transaction(async (tx) => {
-        const rows = (await tx.query(
+        const result = (await tx.query(
           `UPDATE payments
               SET status = 'expired', updated_at = NOW()
             WHERE status = 'created'
@@ -41,7 +41,10 @@ export class ExpiryService implements OnModuleInit, OnModuleDestroy {
                     WHERE a.payment_id = payments.id)
             RETURNING id, reference`,
           [this.ttlSeconds],
-        )) as { id: string; reference: string }[];
+        )) as unknown;
+        const rows = (
+          Array.isArray(result) && Array.isArray(result[0]) ? result[0] : result
+        ) as { id: string; reference: string }[];
 
         for (const row of rows) {
           await this.outbox.writeFailed(
