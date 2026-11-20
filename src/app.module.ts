@@ -19,6 +19,7 @@ import { IdempotencyModule } from './modules/idempotency/idempotency.module.ts';
 import { WebhooksModule } from './modules/webhooks/webhooks.module.ts';
 import { CustomersModule } from './modules/customers/customers.module.ts';
 import { RefundsModule } from './modules/refunds/refunds.module.ts';
+import { OutboxModule } from './outbox/outbox.module.ts';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { RefundsModule } from './modules/refunds/refunds.module.ts';
     WebhooksModule,
     CustomersModule,
     RefundsModule,
+    OutboxModule,
   ],
   controllers: [HealthController],
 })

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { OutboxModule } from '../../outbox/outbox.module.ts';
 import { ProvidersModule } from '../providers/providers.module.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { Payment } from '../payments/entities/payment.entity.ts';
@@ -11,6 +12,7 @@ import { WebhooksService } from './webhooks.service.ts';
   imports: [
     TypeOrmModule.forFeature([WebhookEvent, PaymentAttempt, Payment]),
     ProvidersModule,
+    OutboxModule,
   ],
   controllers: [WebhooksController],
   providers: [WebhooksService],

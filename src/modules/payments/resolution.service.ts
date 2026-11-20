@@ -12,6 +12,7 @@ import { Payment } from './entities/payment.entity.ts';
 import { PaymentStatus, recoveryTransition, transition } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
+import { OutboxService } from '../../outbox/outbox.service.ts';
 
 @Injectable()
 export class ResolutionService {
@@ -21,6 +22,7 @@ export class ResolutionService {
     private readonly payments: PaymentsService,
     private readonly providers: ProvidersService,
     private readonly factory: PaymentProviderFactory,
+    private readonly outbox: OutboxService,
   ) {}
 
   async resolve(auth: AuthContext, paymentId: string): Promise<Payment> {
@@ -144,7 +146,15 @@ export class ResolutionService {
         await tx.update(Payment, { id: payment.id }, { status: outcome });
       }
 
-      return tx.findOneByOrFail(Payment, { id: payment.id });
+      const updated = await tx.findOneByOrFail(Payment, { id: payment.id });
+      if (outcome === 'succeeded' && fresh.status !== 'succeeded') {
+        await this.outbox.writeSucceeded(tx, updated);
+      }
+      if (outcome === 'failed' && current !== 'failed') {
+        await this.outbox.writeFailed(tx, updated);
+      }
+
+      return updated;
     });
   }
 }

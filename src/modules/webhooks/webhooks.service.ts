@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiError } from '../../common/errors/api-error.ts';
+import { OutboxService } from '../../outbox/outbox.service.ts';
 import { ProviderResult } from '../providers/adapter/adapter.ts';
 import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
 import { attemptTransition } from '../payments/attempt-states.ts';
@@ -18,6 +19,7 @@ export class WebhooksService {
     @InjectRepository(PaymentAttempt)
     private readonly attempts: Repository<PaymentAttempt>,
     private readonly factory: PaymentProviderFactory,
+    private readonly outbox: OutboxService,
   ) {}
 
   async ingest(
@@ -133,6 +135,7 @@ export class WebhooksService {
       const attemptRow = await tx.findOneByOrFail(PaymentAttempt, { id: attempt.id });
       const payment = await tx.findOneByOrFail(Payment, { id: attemptRow.paymentId });
       const refusals: string[] = [];
+      let paymentApplied = false;
 
       if (attemptRow.status !== target) {
         try {
@@ -160,12 +163,22 @@ export class WebhooksService {
           } else {
             await tx.update(Payment, { id: payment.id }, { status: target });
           }
+          paymentApplied = true;
         } catch {
           refusals.push(`payment '${payment.status}' refuses '${target}'`);
         }
       }
 
       const status: WebhookEventStatus = refusals.length ? 'ignored' : 'processed';
+      if (status === 'processed' && paymentApplied) {
+        const updated = await tx.findOneByOrFail(Payment, { id: payment.id });
+        if (target === 'succeeded') {
+          await this.outbox.writeSucceeded(tx, updated);
+        } else {
+          await this.outbox.writeFailed(tx, updated);
+        }
+      }
+
       await tx.update(WebhookEvent, { id: rowId }, {
         status,
         error: refusals.length ? refusals.join('; ') : null,

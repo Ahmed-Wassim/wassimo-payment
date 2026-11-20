@@ -14,10 +14,12 @@ import { PaymentsController } from './payments.controller.ts';
 import { ResolutionService } from './resolution.service.ts';
 import { ReturnController } from './return.controller.ts';
 import { ExpiryService } from './expiry.service.ts';
+import { OutboxModule } from '../../outbox/outbox.module.ts';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Payment, PaymentAttempt]),
+    OutboxModule,
     AuthModule,
     CredentialsModule,
     CurrenciesModule,
