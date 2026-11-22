@@ -36,8 +36,10 @@ export function validateEnv(env: NodeJS.ProcessEnv): EnvVars {
     allowUnknown: true,
     convert: true,
   });
+
   if (error) {
     throw new Error(`Configuration error: ${error.message}`);
   }
+  
   return value as EnvVars;
 }
