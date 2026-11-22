@@ -38,8 +38,13 @@ export class OrganizationsController {
   @Get(':id')
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('org:read')
-  async findOne(@Param('id') id: string) {
-    return toOrganizationModel(await this.service.requireById(id));
+  async findOne(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+  ) {
+    return toOrganizationModel(
+      await this.service.requireByIdForActor(req.actor, id),
+    );
   }
 
   @Post()
@@ -52,15 +57,19 @@ export class OrganizationsController {
   @Patch(':id')
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('org:update')
-  update(@Param('id') id: string, @Body() dto: UpdateOrganizationDto) {
-    return this.service.update(id, dto);
+  update(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+    @Body() dto: UpdateOrganizationDto,
+  ) {
+    return this.service.update(req.actor, id, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('org:update')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Req() req: { actor: ActorContext }, @Param('id') id: string) {
+    return this.service.remove(req.actor, id);
   }
 }

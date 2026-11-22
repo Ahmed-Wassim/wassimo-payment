@@ -51,8 +51,11 @@ export class OrganizationsService {
     return this.repo.findOne({ where: { id } });
   }
 
-  async remove(id: string) {
-    const org = await this.requireById(id);
+  async remove(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ) {
+    const org = await this.requireByIdForActor(actor, id);
     if (org.isPlatform) {
       throw new ConflictException('platform organization cannot be deleted');
     }
@@ -74,6 +77,17 @@ export class OrganizationsService {
     return org;
   }
 
+  async requireByIdForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ): Promise<Organization> {
+    const org = await this.requireById(id);
+    if (!actor.isSuperAdmin && org.id !== actor.organizationId) {
+      throw new NotFoundException(`Organization not found ${id}`);
+    }
+    return org;
+  }
+
   async resolvePlatformOrg(): Promise<Organization> {
     return this.repo.findOneOrFail({ where: { isPlatform: true } });
   }
@@ -82,8 +96,12 @@ export class OrganizationsService {
     return this.repo.findOne({ where: { slug } });
   }
 
-  async update(id: string, dto: { name?: string; status?: OrganizationStatus }) {
-    const org = await this.requireById(id);
+  async update(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+    dto: { name?: string; status?: OrganizationStatus },
+  ) {
+    const org = await this.requireByIdForActor(actor, id);
 
     if (dto.name !== undefined) org.name = dto.name;
     if (dto.status !== undefined) org.status = dto.status;
@@ -110,6 +128,7 @@ export class OrganizationsService {
         where: { id: actor.organizationId },
         order: { createdAt: 'ASC' },
       });
+
       return rows.map((row) => toOrganizationModel(row));
     }
 
@@ -117,6 +136,7 @@ export class OrganizationsService {
       where: filter.organizationId ? { id: filter.organizationId } : {},
       order: { createdAt: 'ASC' },
     });
+
     return rows.map((row) => toOrganizationModel(row));
   }
 }
