@@ -1,4 +1,12 @@
-import { IsOptional, IsString, IsUUID, IsNotEmpty, MaxLength } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateRoleDto {
   @IsString()
@@ -9,4 +17,10 @@ export class CreateRoleDto {
   @IsOptional()
   @IsUUID()
   organizationId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  permissionCodes?: string[];
 }

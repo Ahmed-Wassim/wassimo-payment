@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Req, UseGuards, UnauthorizedException, Con
 import { JwtService } from '@nestjs/jwt';
 import { OrganizationsService } from '../organizations/organizations.service.ts';
 import { UsersService } from '../users/users.service.ts';
+import { RolesService } from '../users/roles.service.ts';
 import { RegisterDto } from './dto/register.dto.ts';
 import { LoginDto } from './dto/login.dto.ts';
 import { JwtGuard, ActorContext } from './jwt.guard.ts';
@@ -11,6 +12,7 @@ import * as bcrypt from 'bcrypt';
 export class AuthController {
   constructor(
     private readonly users: UsersService,
+    private readonly roles: RolesService,
     private readonly orgs: OrganizationsService,
     private readonly jwt: JwtService,
   ) {}
@@ -22,14 +24,9 @@ export class AuthController {
     const org = await this.orgs.create({ name: dto.organizationName, slug: dto.organizationSlug });
     const hash = await bcrypt.hash(dto.password, 10);
     const user = await this.users.create({ email: dto.email, passwordHash: hash });
-    const adminRole = await this.users.createOrganizationAdminRole(org.id, user.id);
+    const adminRole = await this.roles.createOrganizationAdminRole(org.id, user.id);
     await this.users.createMembership(user.id, org.id, adminRole.id);
-    const token = this.jwt.sign({
-      sub: user.id,
-      orgId: org.id,
-      roleId: adminRole.id,
-      isSuperAdmin: false,
-    });
+    const token = this.jwt.sign({ sub: user.id });
     return { accessToken: token, user: { id: user.id, email: user.email }, organization: { id: org.id, slug: org.slug } };
   }
 
@@ -41,26 +38,22 @@ export class AuthController {
     if (!ok) throw new UnauthorizedException('Invalid credentials');
     if (user.status !== 'active') throw new UnauthorizedException('Account disabled');
     if (user.isSuperAdmin) {
-      const role = await this.users.findPlatformAdminRole();
+      const role = await this.roles.findPlatformAdminRole();
       const permissions = role
-        ? await this.users.getRolePermissions(role.id)
+        ? await this.roles.getRolePermissionsForActor(
+            { organizationId: null, isSuperAdmin: true },
+            role.id,
+          )
         : [];
-      const token = this.jwt.sign({
-        sub: user.id,
-        orgId: null,
-        roleId: role?.id ?? null,
-        isSuperAdmin: true,
-      });
+      const token = this.jwt.sign({ sub: user.id });
       return { accessToken: token, permissions };
     }
     const membership = await this.users.requireMembership(user.id);
-    const permissions = await this.users.getRolePermissions(membership.roleId);
-    const token = this.jwt.sign({
-      sub: user.id,
-      orgId: membership.organizationId,
-      roleId: membership.roleId,
-      isSuperAdmin: user.isSuperAdmin,
-    });
+    const permissions = await this.roles.getRolePermissionsForActor(
+      { organizationId: membership.organizationId, isSuperAdmin: false },
+      membership.roleId,
+    );
+    const token = this.jwt.sign({ sub: user.id });
     return { accessToken: token, permissions };
   }
 
@@ -69,13 +62,16 @@ export class AuthController {
   async me(@Req() req: { actor: ActorContext }) {
     const actor = req.actor;
     if (actor.isSuperAdmin) {
-      const role = actor.roleId
-        ? await this.users.getRolePermissions(actor.roleId)
+      const permissions = actor.roleId
+        ? await this.roles.getRolePermissionsForActor(actor, actor.roleId)
         : [];
-      return { ...actor, permissions: role };
+      return { ...actor, permissions };
     }
     const membership = await this.users.requireMembership(actor.userId);
-    const permissions = await this.users.getRolePermissions(membership.roleId);
+    const permissions = await this.roles.getRolePermissionsForActor(
+      actor,
+      membership.roleId,
+    );
     return { ...actor, permissions };
   }
 }

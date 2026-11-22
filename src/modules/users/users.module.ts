@@ -7,7 +7,9 @@ import { RolePermission } from './entities/role-permission.entity.ts';
 import { OrgMembership } from './entities/org-membership.entity.ts';
 import { UsersService } from './users.service.ts';
 import { UsersController } from './users.controller.ts';
+import { RolesController } from './roles.controller.ts';
 import { AuthModule } from '../auth/auth.module.ts';
+import { RolesService } from './roles.service.ts';
 
 @Module({
   imports: [
@@ -20,8 +22,8 @@ import { AuthModule } from '../auth/auth.module.ts';
     ]),
     forwardRef(() => AuthModule),
   ],
-  controllers: [UsersController],
-  providers: [UsersService],
-  exports: [UsersService],
+  controllers: [UsersController, RolesController],
+  providers: [UsersService, RolesService],
+  exports: [UsersService, RolesService],
 })
 export class UsersModule {}
