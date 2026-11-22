@@ -6,7 +6,7 @@ export class ApplicationModel {
   slug!: string;
   name!: string;
   status!: ApplicationStatus;
-  organization!: OrganizationModel | null;
+  organization?: OrganizationModel;
   createdAt!: Date;
   updatedAt!: Date;
 }
@@ -17,7 +17,9 @@ export function toApplicationModel(row: Application): ApplicationModel {
     slug: row.slug,
     name: row.name,
     status: row.status,
-    organization: row.organization ? toOrganizationModel(row.organization) : null,
+    ...(row.organization && {
+      organization: toOrganizationModel(row.organization),
+    }),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
