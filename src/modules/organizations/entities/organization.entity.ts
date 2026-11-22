@@ -2,9 +2,11 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Application } from '../../applications/entities/application.entity.ts';
 
 export const ORGANIZATION_STATUSES = ['active', 'disabled'] as const;
 export type OrganizationStatus = (typeof ORGANIZATION_STATUSES)[number];
@@ -31,4 +33,7 @@ export class Organization {
 
   @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
   updatedAt!: Date;
+
+  @OneToMany(() => Application, (application) => application.organization)
+  applications!: Application[];
 }
