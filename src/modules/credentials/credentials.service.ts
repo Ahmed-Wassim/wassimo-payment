@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ApiCredential } from './entities/api-credential.entity.ts';
+import {
+  ApiCredential,
+  CREDENTIAL_STATUS,
+} from './entities/api-credential.entity.ts';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
@@ -38,9 +41,9 @@ export class CredentialsService {
         {
           application: { id: applicationId },
           environment,
-          status: 'active',
+          status: CREDENTIAL_STATUS.ACTIVE,
         },
-        { status: 'revoked', revokedAt: new Date() },
+        { status: CREDENTIAL_STATUS.REVOKED, revokedAt: new Date() },
       );
 
       await manager.insert(ApiCredential, {
@@ -65,7 +68,7 @@ export class CredentialsService {
     const secret = rest.slice(sep + 1);
 
     const row = await this.repo.findOne({
-      where: { keyId, status: 'active' },
+      where: { keyId, status: CREDENTIAL_STATUS.ACTIVE },
       relations: { application: { organization: true } },
     });
     if (!row) return null;
@@ -116,31 +119,43 @@ export class CredentialsService {
     actor: { organizationId: string | null; isSuperAdmin: boolean },
     filter: FilterDto,
   ): Promise<CredentialModel[]> {
-    const rows = await this.repo.find({
-      relations: { application: { organization: true } },
-      order: { createdAt: 'ASC' },
-    });
-
     const organizationId = actor.isSuperAdmin
       ? filter.organizationId ?? null
       : actor.organizationId;
 
-    const filtered = organizationId
-      ? rows.filter((r) => r.application?.organization?.id === organizationId)
-      : rows;
+    if (!actor.isSuperAdmin && !organizationId) return [];
 
-    return filtered.map((row) => toCredentialModel(row));
+    const rows = await this.repo.find({
+      where: organizationId
+        ? { application: { organization: { id: organizationId } } }
+        : {},
+      relations: { application: { organization: true } },
+      order: { createdAt: 'ASC' },
+    });
+    return rows.map((row) => toCredentialModel(row));
   }
 
-  async revoke(id: string): Promise<CredentialModel> {
+  async revokeForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ): Promise<CredentialModel> {
+    if (!actor.isSuperAdmin && !actor.organizationId) {
+      throw new NotFoundException(`Credential not found ${id}`);
+    }
+
     const row = await this.repo.findOne({
-      where: { id },
+      where: actor.isSuperAdmin
+        ? { id }
+        : {
+            id,
+            application: { organization: { id: actor.organizationId! } },
+          },
       relations: { application: true },
     });
     if (!row) throw new NotFoundException(`Credential not found ${id}`);
 
-    if (row.status !== 'revoked') {
-      row.status = 'revoked';
+    if (row.status !== CREDENTIAL_STATUS.REVOKED) {
+      row.status = CREDENTIAL_STATUS.REVOKED;
       row.revokedAt = new Date();
       await this.repo.update(id, {
         status: row.status,
@@ -151,17 +166,21 @@ export class CredentialsService {
     return toCredentialModel(row);
   }
 
-  async findAll(): Promise<CredentialModel[]> {
-    const rows = await this.repo.find({
-      relations: { application: true },
-      order: { createdAt: 'ASC' },
-    });
-    return rows.map((row) => toCredentialModel(row));
-  }
+  async findOneForActor(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ): Promise<CredentialModel> {
+    if (!actor.isSuperAdmin && !actor.organizationId) {
+      throw new NotFoundException(`Credential not found ${id}`);
+    }
 
-  async findOne(id: string): Promise<CredentialModel> {
     const row = await this.repo.findOne({
-      where: { id },
+      where: actor.isSuperAdmin
+        ? { id }
+        : {
+            id,
+            application: { organization: { id: actor.organizationId! } },
+          },
       relations: { application: true },
     });
     if (!row) throw new NotFoundException(`Credential not found ${id}`);

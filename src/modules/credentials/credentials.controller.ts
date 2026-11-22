@@ -33,8 +33,11 @@ export class CredentialsController {
   @Get(':id')
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('keys:read')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  findOne(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+  ) {
+    return this.service.findOneForActor(req.actor, id);
   }
 
   @Post()
@@ -50,7 +53,10 @@ export class CredentialsController {
   @Patch(':id/revoke')
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('keys:revoke')
-  revoke(@Param('id') id: string) {
-    return this.service.revoke(id);
+  revoke(
+    @Req() req: { actor: ActorContext },
+    @Param('id') id: string,
+  ) {
+    return this.service.revokeForActor(req.actor, id);
   }
 }

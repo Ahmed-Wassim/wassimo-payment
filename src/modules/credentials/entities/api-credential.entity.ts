@@ -10,7 +10,12 @@ import { Application } from '../../applications/entities/application.entity.ts';
 export const CREDENTIAL_ENVIRONMENTS = ['test', 'live'] as const;
 export type CredentialEnvironment = (typeof CREDENTIAL_ENVIRONMENTS)[number];
 
-export type CredentialStatus = 'active' | 'revoked';
+export const CREDENTIAL_STATUS = {
+  ACTIVE: 'active',
+  REVOKED: 'revoked',
+} as const;
+export type CredentialStatus =
+  (typeof CREDENTIAL_STATUS)[keyof typeof CREDENTIAL_STATUS];
 
 @Entity('api_credentials')
 export class ApiCredential {
@@ -50,7 +55,12 @@ export class ApiCredential {
   @Column({ type: 'jsonb', default: () => "'[]'::jsonb", nullable: false })
   scopes!: string[];
 
-  @Column({ type: 'varchar', length: 255, default: 'active', nullable: false })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    default: CREDENTIAL_STATUS.ACTIVE,
+    nullable: false,
+  })
   status!: CredentialStatus;
 
   @Column({ name: 'last_used_at', type: 'timestamptz', nullable: true })
