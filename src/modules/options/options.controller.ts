@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiKeyGuard } from '../auth/api-key.guard.ts';
+import { ApiScope } from '../auth/api-scope.decorator.ts';
 import { AuthContext } from '../auth/auth-context.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { ProvidersService } from '../providers/providers.service.ts';
@@ -10,6 +11,7 @@ export class OptionsController {
 
   @Get('v1/options')
   @UseGuards(ApiKeyGuard)
+  @ApiScope('options:read')
   async options(
     @Req() req: { auth?: AuthContext },
     @Query() filter: FilterDto,

@@ -1,5 +1,6 @@
 import { Body, Controller, HttpStatus, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiKeyGuard } from '../auth/api-key.guard.ts';
+import { ApiScope } from '../auth/api-scope.decorator.ts';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
@@ -13,6 +14,7 @@ export class RefundsController {
   constructor(private readonly refunds: RefundsService) {}
 
   @Post('v1/payments/:id/refunds')
+  @ApiScope('refunds:create')
   async request(
     @Req() req: { auth?: AuthContext },
     @Param('id') id: string,
@@ -37,6 +39,7 @@ export class RefundsController {
   }
 
   @Post('v1/payments/:id/refunds/:rid/resolve')
+  @ApiScope('refunds:resolve')
   async resolve(
     @Req() req: { auth?: AuthContext },
     @Param('id') id: string,

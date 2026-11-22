@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiKeyGuard } from '../auth/api-key.guard.ts';
+import { ApiScope } from '../auth/api-scope.decorator.ts';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
 import { IdempotencyService } from '../idempotency/idempotency.service.ts';
@@ -31,6 +32,7 @@ export class PaymentsController {
   ) {}
 
   @Post('v1/payments')
+  @ApiScope('payments:create')
   async create(
     @Req() req: { auth?: AuthContext },
     @Body() dto: CreatePaymentDto,
@@ -61,6 +63,7 @@ export class PaymentsController {
   }
 
   @Get('v1/payments/:id')
+  @ApiScope('payments:read')
   async get(@Req() req: { auth?: AuthContext }, @Param('id') id: string) {
     if (!isUuid(id)) {
       throw new ApiError(
@@ -79,6 +82,7 @@ export class PaymentsController {
   }
 
   @Post('v1/payments/:id/charge')
+  @ApiScope('payments:charge')
   async chargePayment(
     @Req() req: { auth?: AuthContext },
     @Param('id') id: string,
@@ -87,6 +91,7 @@ export class PaymentsController {
   }
 
   @Post('v1/payments/:id/resolve')
+  @ApiScope('payments:resolve')
   async resolvePayment(
     @Req() req: { auth?: AuthContext },
     @Param('id') id: string,
