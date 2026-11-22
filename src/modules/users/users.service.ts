@@ -14,6 +14,7 @@ import { RolePermission } from './entities/role-permission.entity.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { toPermissionModel } from '../permissions/mappers/permission.mapper.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
+import { ORG_ADMIN_PERMISSION_GROUPS } from '../permissions/constants/permissions.constant.ts';
 
 @Injectable()
 export class UsersService {
@@ -185,6 +186,29 @@ export class UsersService {
     return this.roles.save(role);
   }
 
+  async createOrganizationAdminRole(
+    organizationId: string,
+    createdBy: string,
+  ): Promise<Role> {
+    const role = await this.createRole(organizationId, 'Admin', createdBy);
+    const permissions = await this.permissions.find({
+      where: { groupName: In([...ORG_ADMIN_PERMISSION_GROUPS]) },
+    });
+
+    if (permissions.length > 0) {
+      await this.rolePermissions.save(
+        permissions.map((permission) =>
+          this.rolePermissions.create({
+            roleId: role.id,
+            permissionCode: permission.code,
+          }),
+        ),
+      );
+    }
+
+    return role;
+  }
+
   async createRoleForActor(
     actor: { userId: string; organizationId: string | null; isSuperAdmin: boolean },
     name: string,
@@ -202,14 +226,6 @@ export class UsersService {
   async createMembership(userId: string, organizationId: string, roleId: string): Promise<OrgMembership> {
     const membership = this.memberships.create({ userId, organizationId, roleId });
     return this.memberships.save(membership);
-  }
-
-  async listPermissionsByGroup(group: string): Promise<Permission[]> {
-    return this.permissions.find({ where: { groupName: group } });
-  }
-
-  async assignPermissionToRole(roleId: string, permissionCode: string): Promise<void> {
-    await this.rolePermissions.save(this.rolePermissions.create({ roleId, permissionCode }));
   }
 
   async setRolePermissions(

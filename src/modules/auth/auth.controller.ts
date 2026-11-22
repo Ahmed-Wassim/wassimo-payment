@@ -22,15 +22,7 @@ export class AuthController {
     const org = await this.orgs.create({ name: dto.organizationName, slug: dto.organizationSlug });
     const hash = await bcrypt.hash(dto.password, 10);
     const user = await this.users.create({ email: dto.email, passwordHash: hash });
-    const adminRole = await this.users.createRole(org.id, 'Admin', user.id);
-    const orgPerms = await this.users.listPermissionsByGroup('organization');
-    const appPerms = await this.users.listPermissionsByGroup('applications');
-    const keyPerms = await this.users.listPermissionsByGroup('keys');
-    const memberPerms = await this.users.listPermissionsByGroup('members');
-    const paymentPerms = await this.users.listPermissionsByGroup('payments');
-    for (const p of [...orgPerms, ...appPerms, ...keyPerms, ...memberPerms, ...paymentPerms]) {
-      await this.users.assignPermissionToRole(adminRole.id, p.code);
-    }
+    const adminRole = await this.users.createOrganizationAdminRole(org.id, user.id);
     await this.users.createMembership(user.id, org.id, adminRole.id);
     const token = this.jwt.sign({
       sub: user.id,

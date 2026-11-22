@@ -21,4 +21,12 @@ export const PERMISSIONS = [
   // ... add more here later
 ] as const;
 
+export const ORG_ADMIN_PERMISSION_GROUPS = [
+  'organization',
+  'applications',
+  'keys',
+  'members',
+  'payments',
+] as const;
+
 export type PermissionCode = (typeof PERMISSIONS)[number]['code'];
