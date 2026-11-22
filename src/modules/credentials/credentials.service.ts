@@ -29,13 +29,14 @@ export class CredentialsService {
   ) {
     const keyId = randomBytes(4).toString('hex');
     const secret = randomBytes(32).toString('base64url');
-    const token = `wpk_${keyId}_${secret}`;
+    const prefix = `wpk_${keyId}`;
+    const token = `${prefix}_${secret}`;
 
     await this.repo.insert({
       application: { id: applicationId } as any,
       keyId,
       secretHash: createHash('sha256').update(secret).digest('hex'),
-      prefix: token.slice(0, 12),
+      prefix,
       environment,
       scopes,
     });
