@@ -3,12 +3,20 @@ import {
   IsString,
   IsUUID,
   ArrayNotEmpty,
+  IsIn,
   Matches,
 } from 'class-validator';
+import {
+  CREDENTIAL_ENVIRONMENTS,
+  type CredentialEnvironment,
+} from '../entities/api-credential.entity.ts';
 
 export class IssueCredentialDto {
   @IsUUID()
   applicationId!: string;
+
+  @IsIn(CREDENTIAL_ENVIRONMENTS)
+  environment!: CredentialEnvironment;
 
   @IsArray()
   @ArrayNotEmpty()

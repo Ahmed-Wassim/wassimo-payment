@@ -32,13 +32,25 @@ export class CredentialsService {
     const prefix = `wpk_${keyId}`;
     const token = `${prefix}_${secret}`;
 
-    await this.repo.insert({
-      application: { id: applicationId } as any,
-      keyId,
-      secretHash: createHash('sha256').update(secret).digest('hex'),
-      prefix,
-      environment,
-      scopes,
+    await this.repo.manager.transaction(async (manager) => {
+      await manager.update(
+        ApiCredential,
+        {
+          application: { id: applicationId },
+          environment,
+          status: 'active',
+        },
+        { status: 'revoked', revokedAt: new Date() },
+      );
+
+      await manager.insert(ApiCredential, {
+        application: { id: applicationId } as any,
+        keyId,
+        secretHash: createHash('sha256').update(secret).digest('hex'),
+        prefix,
+        environment,
+        scopes,
+      });
     });
 
     return token;
@@ -91,8 +103,13 @@ export class CredentialsService {
       throw new NotFoundException(`Application not found ${dto.applicationId}`);
     }
 
-    const token = await this.issue(dto.applicationId, 'test', dto.scopes);
-    return { applicationId: dto.applicationId, environment: 'test', scopes: dto.scopes, token };
+    const token = await this.issue(dto.applicationId, dto.environment, dto.scopes);
+    return {
+      applicationId: dto.applicationId,
+      environment: dto.environment,
+      scopes: dto.scopes,
+      token,
+    };
   }
 
   async findAllForActor(

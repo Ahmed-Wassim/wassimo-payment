@@ -7,7 +7,8 @@ import {
 } from 'typeorm';
 import { Application } from '../../applications/entities/application.entity.ts';
 
-export type CredentialEnvironment = 'test' | 'live';
+export const CREDENTIAL_ENVIRONMENTS = ['test', 'live'] as const;
+export type CredentialEnvironment = (typeof CREDENTIAL_ENVIRONMENTS)[number];
 
 export type CredentialStatus = 'active' | 'revoked';
 
