@@ -38,7 +38,7 @@ export class ApplicationsService {
     filter: FilterDto,
   ) {
     const organizationId = actor.isSuperAdmin
-      ? filter.organizationId ?? null
+      ? (filter.organizationId ?? null)
       : actor.organizationId;
     const rows = await this.repo.find({
       where: organizationId ? { organization: { id: organizationId } } : {},
@@ -71,7 +71,10 @@ export class ApplicationsService {
       where: { id },
       relations: { organization: true },
     });
-    if (!app || (!actor.isSuperAdmin && app.organization?.id !== actor.organizationId)) {
+    if (
+      !app ||
+      (!actor.isSuperAdmin && app.organization?.id !== actor.organizationId)
+    ) {
       throw new NotFoundException(`Application not found ${id}`);
     }
     return app;
@@ -114,7 +117,11 @@ export class ApplicationsService {
     return toApplicationModel(saved);
   }
 
-  async update(actor: { organizationId: string | null; isSuperAdmin: boolean }, id: string, dto: UpdateApplicationDto) {
+  async update(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+    dto: UpdateApplicationDto,
+  ) {
     const app = await this.requireByIdForActor(actor, id);
 
     if (dto.name !== undefined) app.name = dto.name;
@@ -124,12 +131,16 @@ export class ApplicationsService {
     return toApplicationModel(saved);
   }
 
-  async remove(actor: { organizationId: string | null; isSuperAdmin: boolean }, id: string) {
+  async remove(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    id: string,
+  ) {
     const app = await this.requireByIdForActor(actor, id);
 
     const credentials = await this.credentials.count({
       where: { application: { id: app.id } },
     });
+
     if (credentials > 0) {
       throw new ConflictException(
         `application ${app.slug} has ${credentials} credential(s); revoke or delete them first`,
