@@ -3,8 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { UsersService } from '../users/users.service.ts';
 import { requirePermission } from './permissions.ts';
 import { ActorContext } from './jwt.guard.ts';
-
-export const PERMISSION_KEY = 'permission';
+import { PERMISSION_KEY } from './permission.decorator.ts';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
