@@ -20,6 +20,7 @@ export const PAYTABS_METHODS = [
   { code: 'meezaqr', name: 'Meeza QR' },
   { code: 'applepay', name: 'Apple Pay' },
   { code: 'samsungpay', name: 'Samsung Pay' },
+  { code: 'googlepay', name: 'Google Pay' },
   { code: 'paypal', name: 'PayPal' },
   { code: 'valu', name: 'ValU' },
   { code: 'installment', name: 'NBE Installments' },
@@ -31,6 +32,7 @@ export const PAYTABS_METHODS = [
   { code: 'tabby', name: 'Tabby' },
   { code: 'aman', name: 'Aman' },
   { code: 'sadad', name: 'SADAD' },
+  { code: 'tappy', name: 'Tappy' },
   { code: 'touchpoints', name: 'TouchPoints' },
   { code: 'tru', name: 'TRU' },
 ] satisfies ProviderMethod[];
@@ -38,6 +40,9 @@ export const PAYTABS_METHODS = [
 export const PAYMOB_METHODS = [
   { code: 'card', name: 'Card' },
   { code: 'mobile_wallet', name: 'Mobile Wallet' },
+  { code: 'applepay', name: 'Apple Pay' },
+  { code: 'googlepay', name: 'Google Pay' },
+  { code: 'stcpay', name: 'StcPay' },
 ] satisfies ProviderMethod[];
 
 export const FAWATERAK_METHODS = [
