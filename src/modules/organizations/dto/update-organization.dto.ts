@@ -1,5 +1,8 @@
 import { IsIn, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
-import type { OrganizationStatus } from '../entities/organization.entity.ts';
+import {
+  ORGANIZATION_STATUSES,
+  type OrganizationStatus,
+} from '../entities/organization.entity.ts';
 
 export class UpdateOrganizationDto {
   @IsOptional()
@@ -9,6 +12,6 @@ export class UpdateOrganizationDto {
   name?: string;
 
   @IsOptional()
-  @IsIn(['active', 'disabled'])
+  @IsIn(ORGANIZATION_STATUSES)
   status?: OrganizationStatus;
 }
