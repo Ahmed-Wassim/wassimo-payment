@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User, UserStatus } from './entities/user.entity.ts';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { OrgMembership } from './entities/org-membership.entity.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
@@ -50,18 +50,24 @@ export class UsersService {
     return row;
   }
 
-  async create(data: { email: string; passwordHash: string }): Promise<User> {
-    const user = this.users.create(data);
-    return this.users.save(user);
+  async create(
+    data: { email: string; passwordHash: string },
+    manager: EntityManager,
+  ): Promise<User> {
+    const repo = manager.getRepository(User);
+    const user = repo.create(data);
+    return repo.save(user);
   }
 
   async createMembership(
     userId: string,
     organizationId: string,
     roleId: string,
+    manager: EntityManager,
   ): Promise<OrgMembership> {
-    const membership = this.memberships.create({ userId, organizationId, roleId });
-    return this.memberships.save(membership);
+    const repo = manager.getRepository(OrgMembership);
+    const membership = repo.create({ userId, organizationId, roleId });
+    return repo.save(membership);
   }
 
   async createMemberForActor(

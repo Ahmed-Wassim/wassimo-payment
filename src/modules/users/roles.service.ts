@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, IsNull, Repository } from 'typeorm';
+import { EntityManager, In, IsNull, Repository } from 'typeorm';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { ORG_ADMIN_PERMISSION_GROUPS } from '../permissions/constants/permissions.constant.ts';
 import { OrgMembership } from './entities/org-membership.entity.ts';
@@ -117,8 +117,9 @@ export class RolesService {
   async createOrganizationAdminRole(
     organizationId: string,
     createdBy: string,
+    manager: EntityManager,
   ): Promise<Role> {
-    const permissions = await this.permissions.find({
+    const permissions = await manager.getRepository(Permission).find({
       where: { groupName: In([...ORG_ADMIN_PERMISSION_GROUPS]) },
     });
     return this.createRoleWithPermissions(
@@ -126,6 +127,7 @@ export class RolesService {
       'Admin',
       createdBy,
       permissions.map((permission) => permission.code),
+      manager,
     );
   }
 
@@ -159,8 +161,9 @@ export class RolesService {
     name: string,
     createdBy: string,
     permissionCodes: string[],
+    manager?: EntityManager,
   ): Promise<Role> {
-    return this.roles.manager.transaction(async (manager) => {
+    const create = async (manager: EntityManager) => {
       const role = manager.create(Role, {
         organizationId,
         name,
@@ -177,7 +180,8 @@ export class RolesService {
         );
       }
       return role;
-    });
+    };
+    return manager ? create(manager) : this.roles.manager.transaction(create);
   }
 
   async setRolePermissions(

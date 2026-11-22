@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Organization } from './entities/organization.entity.ts';
 import { OrganizationStatus } from './entities/organization.entity.ts';
 import { Application } from '../applications/entities/application.entity.ts';
@@ -27,20 +27,24 @@ export class OrganizationsService {
     return rows.map((row) => toOrganizationModel(row));
   }
 
-  async create(dto: { slug: string; name: string; status?: OrganizationStatus }) {
-    const exists = await this.repo.findOne({ where: { slug: dto.slug } });
+  async create(
+    dto: { slug: string; name: string; status?: OrganizationStatus },
+    manager?: EntityManager,
+  ) {
+    const repo = manager?.getRepository(Organization) ?? this.repo;
+    const exists = await repo.findOne({ where: { slug: dto.slug } });
     if (exists) {
       throw new ConflictException(`Organization already exists: ${dto.slug}`);
     }
 
-    const org = this.repo.create({
+    const org = repo.create({
       slug: dto.slug,
       name: dto.name,
       status: (dto.status ?? 'active') as OrganizationStatus,
       isPlatform: false,
     });
 
-    const saved = await this.repo.save(org);
+    const saved = await repo.save(org);
     return toOrganizationModel(saved);
   }
 

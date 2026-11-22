@@ -7,6 +7,7 @@ import { RegisterDto } from './dto/register.dto.ts';
 import { LoginDto } from './dto/login.dto.ts';
 import { JwtGuard, ActorContext } from './jwt.guard.ts';
 import * as bcrypt from 'bcrypt';
+import { DataSource } from 'typeorm';
 
 @Controller()
 export class AuthController {
@@ -15,17 +16,31 @@ export class AuthController {
     private readonly roles: RolesService,
     private readonly orgs: OrganizationsService,
     private readonly jwt: JwtService,
+    private readonly dataSource: DataSource,
   ) {}
 
   @Post('auth/register')
   async register(@Body() dto: RegisterDto) {
     const existing = await this.users.findByEmail(dto.email);
     if (existing) throw new ConflictException('Email already registered');
-    const org = await this.orgs.create({ name: dto.organizationName, slug: dto.organizationSlug });
     const hash = await bcrypt.hash(dto.password, 10);
-    const user = await this.users.create({ email: dto.email, passwordHash: hash });
-    const adminRole = await this.roles.createOrganizationAdminRole(org.id, user.id);
-    await this.users.createMembership(user.id, org.id, adminRole.id);
+    const { org, user } = await this.dataSource.transaction(async (manager) => {
+      const org = await this.orgs.create(
+        { name: dto.organizationName, slug: dto.organizationSlug },
+        manager,
+      );
+      const user = await this.users.create(
+        { email: dto.email, passwordHash: hash },
+        manager,
+      );
+      const adminRole = await this.roles.createOrganizationAdminRole(
+        org.id,
+        user.id,
+        manager,
+      );
+      await this.users.createMembership(user.id, org.id, adminRole.id, manager);
+      return { org, user };
+    });
     const token = this.jwt.sign({ sub: user.id });
     return { accessToken: token, user: { id: user.id, email: user.email }, organization: { id: org.id, slug: org.slug } };
   }
