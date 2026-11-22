@@ -9,7 +9,8 @@ import {
 } from 'typeorm';
 import { Organization } from '../../organizations/entities/organization.entity.ts';
 
-export type ApplicationStatus = 'active' | 'disabled';
+export const APPLICATION_STATUSES = ['active', 'disabled'] as const;
+export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
 @Entity('applications')
 export class Application {
