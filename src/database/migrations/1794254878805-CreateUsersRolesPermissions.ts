@@ -107,43 +107,6 @@ export class CreateUsersRolesPermissions1794254878805 implements MigrationInterf
         ON DELETE NO ACTION ON UPDATE NO ACTION;
     `);
 
-    await queryRunner.query(`
-      INSERT INTO "permissions" ("code", "name", "group_name") VALUES
-        ('org:read',             'View organization',        'organization'),
-        ('org:update',           'Edit organization',        'organization'),
-        ('org:members:read',     'View members',             'members'),
-        ('org:members:manage',   'Manage members',           'members'),
-        ('apps:read',            'View applications',        'applications'),
-        ('apps:create',          'Create applications',      'applications'),
-        ('apps:update',          'Edit applications',        'applications'),
-        ('keys:read',            'View API keys',            'keys'),
-        ('keys:issue',           'Issue API keys',           'keys'),
-        ('keys:revoke',          'Revoke API keys',          'keys'),
-        ('platform:orgs:read',   'View all organizations',   'platform'),
-        ('platform:orgs:filter', 'Filter by organization',   'platform');
-    `);
-
-    await queryRunner.query(`
-      INSERT INTO "roles" ("id", "organization_id", "name")
-      SELECT '00000000-0000-0000-0000-000000000001', NULL, 'Super Admin';
-    `);
-
-    await queryRunner.query(`
-      INSERT INTO "role_permissions" ("role_id", "permission_code")
-      SELECT '00000000-0000-0000-0000-000000000001', "code" FROM "permissions";
-    `);
-
-    await queryRunner.query(`
-      INSERT INTO "users" ("email", "password_hash", "is_super_admin")
-      VALUES ('superadmin@wassimo.local', '$2b$10$8RK5fNTSm20/LluvZWPCBu3jX53axu0l48O9cdIM3mnBO73I6Og3e', true);
-    `);
-
-    await queryRunner.query(`
-      INSERT INTO "org_memberships" ("user_id", "organization_id", "role_id")
-      SELECT u."id", o."id", '00000000-0000-0000-0000-000000000001'
-      FROM "users" u CROSS JOIN "organizations" o
-      WHERE u."is_super_admin" = true AND o."slug" = 'wassimo';
-    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
