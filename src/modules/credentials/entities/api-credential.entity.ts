@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -18,6 +19,11 @@ export type CredentialStatus =
   (typeof CREDENTIAL_STATUS)[keyof typeof CREDENTIAL_STATUS];
 
 @Entity('api_credentials')
+@Index(
+  'UQ_api_credentials_one_active_per_environment',
+  ['application', 'environment'],
+  { unique: true, where: `"status" = 'active'` },
+)
 export class ApiCredential {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
