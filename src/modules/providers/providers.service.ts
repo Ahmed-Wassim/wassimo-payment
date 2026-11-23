@@ -151,7 +151,6 @@ export class ProvidersService {
       supportedCurrencies: dto.supportedCurrencies,
       supportedMethods: dto.supportedMethods,
       config: dto.config ?? {},
-      credentialsRef: dto.credentialsRef ?? null,
       status: 'disabled',
     });
     const saved = await this.accounts.save(row);

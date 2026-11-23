@@ -50,7 +50,4 @@ export class CreateProviderAccountDto {
   @IsObject()
   config?: Record<string, unknown>;
 
-  @IsOptional()
-  @IsString()
-  credentialsRef?: string;
 }

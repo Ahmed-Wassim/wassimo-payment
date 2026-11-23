@@ -53,9 +53,6 @@ export class ProviderAccount {
   @Column({ type: 'jsonb', default: '{}' })
   config!: Record<string, unknown>;
 
-  @Column({ name: 'credentials_ref', nullable: true, type: 'text' })
-  credentialsRef!: string | null;
-
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
