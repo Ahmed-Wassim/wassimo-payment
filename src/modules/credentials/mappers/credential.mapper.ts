@@ -3,7 +3,7 @@ import { toApplicationModel, ApplicationModel } from '../../applications/mappers
 
 export class CredentialModel {
   id!: string;
-  application!: ApplicationModel;
+  application?: ApplicationModel;
   keyId!: string;
   prefix!: string;
   environment!: CredentialEnvironment;
@@ -17,7 +17,9 @@ export class CredentialModel {
 export function toCredentialModel(row: ApiCredential): CredentialModel {
   return {
     id: row.id,
-    application: toApplicationModel(row.application),
+    ...(row.application && {
+      application: toApplicationModel(row.application),
+    }),
     keyId: row.keyId,
     prefix: row.prefix,
     environment: row.environment,

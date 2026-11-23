@@ -21,7 +21,7 @@ export interface PaymentModel {
   captured_minor: number;
   refunded_confirmed_minor: number;
   method: string | null;
-  customer_details: CustomerDetails | null;
+  customer_details?: CustomerDetails | null;
   created_at: string;
   updated_at: string;
 }
@@ -36,7 +36,9 @@ const STATUS_DETAIL: Record<PaymentStatus, PaymentStatusDetail> = {
 
 export function toPaymentModel(p: Payment, customer?: Customer | null): PaymentModel {
   return {
-    customer_details: customer ? toCustomerDetails(customer) : null,
+    ...(customer !== undefined && {
+      customer_details: customer ? toCustomerDetails(customer) : null,
+    }),
     id: p.id,
     reference: p.reference,
     amount_minor: Number(p.amountMinor),

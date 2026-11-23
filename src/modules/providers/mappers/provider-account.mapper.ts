@@ -4,8 +4,8 @@ import { toApplicationModel, ApplicationModel } from '../../applications/mappers
 
 export class ProviderAccountModel {
   id!: string;
-  organization!: OrganizationModel;
-  application!: ApplicationModel;
+  organization?: OrganizationModel;
+  application?: ApplicationModel;
   providerCode!: string;
   environment!: ProviderEnvironment;
   displayName!: string;
@@ -20,8 +20,12 @@ export class ProviderAccountModel {
 export function toProviderAccountModel(row: ProviderAccount): ProviderAccountModel {
   return {
     id: row.id,
-    organization: toOrganizationModel(row.organization),
-    application: toApplicationModel(row.application),
+    ...(row.organization && {
+      organization: toOrganizationModel(row.organization),
+    }),
+    ...(row.application && {
+      application: toApplicationModel(row.application),
+    }),
     providerCode: row.providerCode,
     environment: row.environment,
     displayName: row.displayName,
