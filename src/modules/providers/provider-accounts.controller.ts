@@ -57,7 +57,7 @@ export class ProviderAccountsController {
     @Req() req: { actor: ActorContext },
     @Body() dto: CreateProviderAccountDto,
   ) {
-    return this.service.createAccountForActor(req.actor, dto);
+    return this.service.createAccount(req.actor, dto);
   }
 
   @Patch(':id')

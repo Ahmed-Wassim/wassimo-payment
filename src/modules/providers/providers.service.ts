@@ -118,17 +118,29 @@ export class ProvidersService {
     return toProviderAccountModel(await this.requireByIdForActor(actor, id));
   }
 
-  async createAccount(dto: CreateProviderAccountDto) {
+  async createAccount(
+    actor: { organizationId: string | null; isSuperAdmin: boolean },
+    dto: CreateProviderAccountDto,
+  ) {
+    const organizationId = actor.isSuperAdmin
+      ? dto.organizationId
+      : actor.organizationId;
+    if (!organizationId) {
+      throw new BadRequestException(
+        'organizationId is required for platform actors creating accounts',
+      );
+    }
+
     const org = await this.accounts.manager.findOne(Organization, {
-      where: { id: dto.organizationId },
+      where: { id: organizationId },
     });
     if (!org) {
-      throw new NotFoundException(`Organization not found ${dto.organizationId}`);
+      throw new NotFoundException(`Organization not found ${organizationId}`);
     }
     const application = await this.accounts.manager.findOne(Application, {
       where: {
         id: dto.applicationId,
-        organization: { id: dto.organizationId },
+        organization: { id: organizationId },
       },
     });
     if (!application) {
@@ -140,7 +152,7 @@ export class ProvidersService {
     if (!provider) {
       throw new NotFoundException(`Provider not found: ${dto.providerCode}`);
     }
-    this.assertMethodsSupported(provider, dto.supportedMethods);
+    this.validateProviderAccountMethods(provider, dto.supportedMethods);
 
     const row = this.accounts.create({
       organization: org as any,
@@ -157,19 +169,6 @@ export class ProvidersService {
     return toProviderAccountModel(saved);
   }
 
-  async createAccountForActor(
-    actor: { organizationId: string | null; isSuperAdmin: boolean },
-    dto: CreateProviderAccountDto,
-  ) {
-    const orgId = actor.isSuperAdmin ? dto.organizationId : actor.organizationId;
-    if (!orgId) {
-      throw new BadRequestException(
-        'organizationId is required for platform actors creating accounts',
-      );
-    }
-    return this.createAccount({ ...dto, organizationId: orgId });
-  }
-
   async updateAccount(
     actor: { organizationId: string | null; isSuperAdmin: boolean },
     id: string,
@@ -183,7 +182,7 @@ export class ProvidersService {
     }
     if (dto.supportedMethods !== undefined) {
       const provider = await this.requireByCode(row.providerCode);
-      this.assertMethodsSupported(provider, dto.supportedMethods);
+      this.validateProviderAccountMethods(provider, dto.supportedMethods);
       row.supportedMethods = dto.supportedMethods;
     }
     if (dto.config !== undefined) row.config = dto.config;
@@ -201,7 +200,10 @@ export class ProvidersService {
     await this.accounts.remove(row);
   }
 
-  private assertMethodsSupported(provider: Provider, requested: string[]): void {
+  private validateProviderAccountMethods(
+    provider: Provider,
+    requested: string[],
+  ): void {
     const catalogue = new Map<string, ProviderMethod>(
       provider.methods.map((method) => [method.code, method]),
     );
