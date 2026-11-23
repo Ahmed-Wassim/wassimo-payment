@@ -31,6 +31,15 @@
 $ npm install
 ```
 
+## Database setup
+
+After starting PostgreSQL, apply the migrations and seed the initial data:
+
+```bash
+npm run migration:run
+npm run seed
+```
+
 ## Compile and run the project
 
 ```bash
