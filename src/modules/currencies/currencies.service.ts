@@ -17,19 +17,19 @@ export class CurrenciesService {
   ) {}
 
   async requireEnabled(code: string): Promise<Currency> {
-    const c = await this.repo.findOne({
+    const currency = await this.repo.findOne({
       where: { code: code.toUpperCase().trim() },
     });
-    if (!c) throw new NotFoundException(`unknown currency ${code}`);
-    if (!c.enabled)
+    if (!currency) throw new NotFoundException(`unknown currency ${code}`);
+    if (!currency.enabled)
       throw new BadRequestException(`currency ${code} not enabled`);
-    return c;
+    return currency;
   }
 
   findAll() {
-    return this.repo.find({ order: { code: 'ASC' } }).then((rows) =>
-      rows.map((row) => toCurrencyModel(row)),
-    );
+    return this.repo
+      .find({ order: { code: 'ASC' } })
+      .then((rows) => rows.map((row) => toCurrencyModel(row)));
   }
 
   async findByCode(code: string) {
@@ -60,7 +60,14 @@ export class CurrenciesService {
     return toCurrencyModel(saved);
   }
 
-  async update(code: string, dto: { symbol?: string; symbolUrl?: string; enabled?: boolean }) {
+  async update(
+    code: string,
+    dto: {
+      symbol?: string;
+      symbolUrl?: string | null;
+      enabled?: boolean;
+    },
+  ) {
     const normalized = code.toUpperCase().trim();
     const currency = await this.repo.findOne({ where: { code: normalized } });
 
@@ -88,11 +95,18 @@ export class CurrenciesService {
     return { deleted: true, code: normalized };
   }
 
-  minorToDecimal(amountMinor: bigint | number | string, exponent: number): string {
+  minorToDecimal(
+    amountMinor: bigint | number | string,
+    exponent: number,
+  ): string {
     const value =
       typeof amountMinor === 'bigint'
         ? amountMinor
-        : BigInt(typeof amountMinor === 'string' ? amountMinor : Math.trunc(amountMinor));
+        : BigInt(
+            typeof amountMinor === 'string'
+              ? amountMinor
+              : Math.trunc(amountMinor),
+          );
     const negative = value < 0n;
     const abs = negative ? -value : value;
     if (exponent === 0) {
