@@ -23,7 +23,6 @@ export interface MockSession {
   customer: CheckoutCustomer | null;
   outcome: MockOutcome;
   webhookDelivered: boolean;
-  webhookSecret: string;
 }
 
 @Injectable()
@@ -37,8 +36,8 @@ export class MockHostedService {
     this.secret = config.mock.webhookSecret;
   }
 
-  webhookSecretFor(sessionRef: string): string {
-    return this.sessions.get(sessionRef)?.webhookSecret ?? this.secret;
+  webhookSecret(): string {
+    return this.secret;
   }
 
   openSession(
@@ -47,7 +46,6 @@ export class MockHostedService {
     currency: string,
     method: string,
     customer: CheckoutCustomer | null,
-    webhookSecret = this.secret,
   ): MockSession {
     const sessionRef = 'mock_' + randomBytes(6).toString('hex');
     const session: MockSession = {
@@ -59,7 +57,6 @@ export class MockHostedService {
       customer,
       outcome: 'pending',
       webhookDelivered: false,
-      webhookSecret,
     };
     this.sessions.set(sessionRef, session);
     return session;
@@ -82,7 +79,6 @@ export class MockHostedService {
       customer: null,
       outcome: lost ? 'pending' : 'succeeded',
       webhookDelivered: false,
-      webhookSecret: this.secret,
     };
     this.sessions.set(sessionRef, session);
     return { sessionRef, lost };

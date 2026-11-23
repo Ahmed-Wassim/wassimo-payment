@@ -15,6 +15,7 @@ import {
 import { ProviderAccount } from '../../entities/provider-account.entity.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
 import { ProviderCredentialService } from '../../provider-credential.service.ts';
+import { findAttemptForProvider } from '../../provider-attempt.lookup.ts';
 
 export class PaytabsAdapter implements ProviderAdapter {
   readonly providerCode = PROVIDER_CODE.Paytabs;
@@ -23,7 +24,6 @@ export class PaytabsAdapter implements ProviderAdapter {
     private readonly currencies: CurrenciesService,
     private readonly credentialsService: ProviderCredentialService,
     private readonly attempts: Repository<PaymentAttempt>,
-    private readonly accounts: Repository<ProviderAccount>,
     private readonly bound: { account: ProviderAccount; credentials: Record<string, string> } | null,
   ) {}
 
@@ -94,10 +94,13 @@ export class PaytabsAdapter implements ProviderAdapter {
     const tranRef = parsed.tran_ref || parsed.tranRef;
     if (!tranRef) return null;
 
-    const attempt = await this.attempts.findOne({ where: { providerReference: String(tranRef) } });
+    const attempt = await findAttemptForProvider(
+      this.attempts,
+      String(tranRef),
+      this.providerCode,
+    );
     if (!attempt) return null;
-    const account = await this.accounts.findOne({ where: { id: attempt.providerAccountId } });
-    if (!account) return null;
+    const account = attempt.providerAccount;
     const credentials = await this.credentialsService.load(account.id).catch(() => null);
     if (!credentials) return null;
 

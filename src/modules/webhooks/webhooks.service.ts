@@ -10,6 +10,7 @@ import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { Payment } from '../payments/entities/payment.entity.ts';
 import { transition } from '../payments/states.ts';
 import { WebhookEvent, WebhookEventStatus, WebhookIngestStatus } from './entities/webhook-event.entity.ts';
+import { findAttemptForProvider } from '../providers/provider-attempt.lookup.ts';
 
 @Injectable()
 export class WebhooksService {
@@ -40,22 +41,24 @@ export class WebhooksService {
     }
 
     const attempt = event.providerReference
-      ? await this.attempts.findOne({
-          where: { providerReference: event.providerReference },
-        })
+      ? await findAttemptForProvider(
+          this.attempts,
+          event.providerReference,
+          providerCode,
+        )
       : null;
 
     let row: WebhookEvent | null;
     if (event.providerEventId) {
       row = await this.insertDedupeRow({
-        providerAccountId: attempt ? attempt.providerAccountId : null,
+        providerAccountId: attempt ? attempt.providerAccount.id : null,
         providerEventId: event.providerEventId,
         eventType: event.eventType,
         rawPayload: event.raw as Record<string, unknown>,
       });
     } else {
       row = await this.events.save({
-        providerAccountId: attempt ? attempt.providerAccountId : null,
+        providerAccountId: attempt ? attempt.providerAccount.id : null,
         providerEventId: null,
         eventType: event.eventType,
         rawPayload: event.raw as Record<string, unknown>,
@@ -132,8 +135,13 @@ export class WebhooksService {
     }
 
     return this.events.manager.transaction(async (tx) => {
-      const attemptRow = await tx.findOneByOrFail(PaymentAttempt, { id: attempt.id });
-      const payment = await tx.findOneByOrFail(Payment, { id: attemptRow.paymentId });
+      const attemptRow = await tx.findOneOrFail(PaymentAttempt, {
+        where: { id: attempt.id },
+        relations: { payment: true },
+      });
+      const payment = await tx.findOneByOrFail(Payment, {
+        id: attemptRow.payment.id,
+      });
       const refusals: string[] = [];
       let paymentApplied = false;
 

@@ -15,16 +15,14 @@ import {
 } from '../../adapter/adapter.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
 import { ProviderCredentialService } from '../../provider-credential.service.ts';
+import { findAttemptForProvider } from '../../provider-attempt.lookup.ts';
 
 export class PaymobAdapter implements ProviderAdapter {
   readonly providerCode = PROVIDER_CODE.Paymob;
 
-  private authTokenCache: { token: string; expiresAt: number } | null = null;
-
   constructor(
     private readonly credentialsService: ProviderCredentialService,
     private readonly attempts: Repository<PaymentAttempt>,
-    private readonly accounts: Repository<ProviderAccount>,
     private readonly bound: { account: ProviderAccount; credentials: Record<string, string> } | null,
   ) {}
 
@@ -241,17 +239,15 @@ export class PaymobAdapter implements ProviderAdapter {
   }
 
   private async authToken(base: string, apiKey: string): Promise<string> {
-    const now = Date.now();
-    if (this.authTokenCache && this.authTokenCache.expiresAt > now) {
-      return this.authTokenCache.token;
-    }
     const res = await fetch(`${base}/api/auth/tokens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ api_key: apiKey }),
     });
     const data = (await res.json()) as any;
-    this.authTokenCache = { token: data.token, expiresAt: now + 50 * 60 * 1000 };
+    if (!res.ok || !data?.token) {
+      throw new ProviderConfigError(`paymob authentication: ${res.status}`);
+    }
     return data.token;
   }
 
@@ -287,9 +283,13 @@ export class PaymobAdapter implements ProviderAdapter {
     if (!tx?.order?.id) return null;
 
     const providerReference = String(tx.order.id);
-    const attempt = await this.attempts.findOne({ where: { providerReference } });
+    const attempt = await findAttemptForProvider(
+      this.attempts,
+      providerReference,
+      this.providerCode,
+    );
     if (!attempt) return null;
-    const creds = await this.credentialsService.load(attempt.providerAccountId).catch(() => null);
+    const creds = await this.credentialsService.load(attempt.providerAccount.id).catch(() => null);
     if (!creds?.hmac_secret) return null;
 
     if (!this.validHmac(tx, creds.hmac_secret, hmac)) return null;
@@ -323,10 +323,15 @@ export class PaymobAdapter implements ProviderAdapter {
 
   private async context(providerReference: string) {
     if (this.bound) return { config: (this.bound.account.config ?? {}) as any, credentials: this.bound.credentials };
-    const attempt = await this.attempts.findOne({ where: { providerReference } });
-    const account = await this.accounts.findOne({ where: { id: attempt!.providerAccountId } });
-    const credentials = await this.credentialsService.load(account!.id);
-    return { config: (account!.config ?? {}) as any, credentials };
+    const attempt = await findAttemptForProvider(
+      this.attempts,
+      providerReference,
+      this.providerCode,
+    );
+    if (!attempt) throw new ProviderConfigError('paymob: attempt not found or ambiguous');
+    const account = attempt.providerAccount;
+    const credentials = await this.credentialsService.load(account.id);
+    return { config: (account.config ?? {}) as any, credentials };
   }
 }
 
