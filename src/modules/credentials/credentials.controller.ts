@@ -15,6 +15,7 @@ import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { Permission } from '../auth/permission.decorator.ts';
+import { API_SCOPES } from '../auth/api-scopes.ts';
 
 @Controller('credentials')
 export class CredentialsController {
@@ -28,6 +29,13 @@ export class CredentialsController {
     @Query() filter: FilterDto,
   ) {
     return this.service.findAllForActor(req.actor, filter);
+  }
+
+  @Get('scope-catalog')
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('keys:issue')
+  getScopeCatalog() {
+    return API_SCOPES;
   }
 
   @Get(':id')

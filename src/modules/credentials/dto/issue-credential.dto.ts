@@ -1,11 +1,13 @@
 import {
-  IsArray,
-  IsString,
-  IsUUID,
   ArrayNotEmpty,
   IsIn,
-  Matches,
+  IsArray,
+  IsUUID,
 } from 'class-validator';
+import {
+  API_SCOPE_CODES,
+  type ApiScopeCode,
+} from '../../auth/api-scopes.ts';
 import {
   CREDENTIAL_ENVIRONMENTS,
   type CredentialEnvironment,
@@ -20,10 +22,9 @@ export class IssueCredentialDto {
 
   @IsArray()
   @ArrayNotEmpty()
-  @IsString({ each: true })
-  @Matches(/^[a-z]+:[a-z-]+$/, {
+  @IsIn(API_SCOPE_CODES, {
     each: true,
-    message: 'scope must be like payments:create',
+    message: 'scope must be a supported API scope',
   })
-  scopes!: string[];
+  scopes!: ApiScopeCode[];
 }

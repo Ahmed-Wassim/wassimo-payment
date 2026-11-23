@@ -11,6 +11,7 @@ import {
   VerifiedCredential,
 } from '../credentials/credentials.service.ts';
 import { API_SCOPE_KEY } from './api-scope.decorator.ts';
+import type { ApiScopeCode } from './api-scopes.ts';
 
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
@@ -35,7 +36,7 @@ export class ApiKeyGuard implements CanActivate {
       throw new UnauthorizedException('invalid api key');
     }
 
-    const requiredScope = this.reflector.get<string>(
+    const requiredScope = this.reflector.get<ApiScopeCode>(
       API_SCOPE_KEY,
       ctx.getHandler(),
     );
