@@ -155,8 +155,8 @@ export class ProvidersService {
     this.validateProviderAccountMethods(provider, dto.supportedMethods);
 
     const row = this.accounts.create({
-      organization: org as any,
-      application: application as any,
+      organization: org,
+      application,
       providerCode: dto.providerCode,
       environment: dto.environment,
       displayName: dto.displayName,
