@@ -14,6 +14,7 @@ import { PaymentProviderFactory } from './factories/payment-provider.factory.ts'
 import { ProviderMethodsSeeder } from './seeder/provider-methods.seeder.ts';
 import { ProviderCredentialService } from './provider-credential.service.ts';
 import { ProvidersController } from './providers.controller.ts';
+import { ProviderAccountsController } from './provider-accounts.controller.ts';
 import { ProvidersService } from './providers.service.ts';
 
 @Module({
@@ -28,7 +29,11 @@ import { ProvidersService } from './providers.service.ts';
     forwardRef(() => AuthModule),
     forwardRef(() => UsersModule),
   ],
-  controllers: [ProvidersController, MockHostedController],
+  controllers: [
+    ProvidersController,
+    ProviderAccountsController,
+    MockHostedController,
+  ],
   providers: [
     ProvidersService,
     ProviderCredentialService,
