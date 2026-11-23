@@ -25,7 +25,10 @@ export const envValidationSchema = Joi.object<EnvVars, true>({
   EXPIRY_SWEEP_SECONDS: Joi.number().integer().min(1).default(60),
   PAYMENT_TTL_SECONDS: Joi.number().integer().min(1).default(1800),
   JWT_SECRET: Joi.string().default('dev-jwt-secret-change-in-prod'),
-  ENCRYPTION_KEY: Joi.string().hex().length(64).optional(),
+  ENCRYPTION_KEY: Joi.string()
+    .hex()
+    .length(64)
+    .when('ENV', { is: 'prod', then: Joi.required(), otherwise: Joi.optional() }),
   MOCK_WEBHOOK_SECRET: Joi.string().min(1).default('mock-dev-secret'),
   APP_URL: Joi.string().uri().default('http://localhost:9053'),
 }).unknown(true);

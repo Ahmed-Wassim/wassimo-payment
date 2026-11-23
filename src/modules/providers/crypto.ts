@@ -23,9 +23,10 @@ export function decryptPayload(payload: string, keyHex: string): string {
   if (version !== PAYLOAD_VERSION) {
     throw new Error('Unsupported credential payload version');
   }
+  const key = Buffer.from(keyHex, 'hex');
   const decipher = createDecipheriv(
     ALGORITHM,
-    keyHex.length ? Buffer.from(keyHex, 'hex') : Buffer.alloc(0),
+    key,
     Buffer.from(ivB64, 'base64'),
   );
   decipher.setAuthTag(Buffer.from(tagB64, 'base64'));

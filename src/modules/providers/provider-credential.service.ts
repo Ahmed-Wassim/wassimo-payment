@@ -43,7 +43,7 @@ export class ProviderCredentialService {
     await this.set(accountId, payload);
   }
 
-  async set(accountId: string, payload: Record<string, string>): Promise<void> {
+  private async set(accountId: string, payload: Record<string, string>): Promise<void> {
     const encrypted = encryptPayload(JSON.stringify(payload), this.requireKey());
     const existing = await this.credentials.findOneBy({
       providerAccountId: accountId,
@@ -75,7 +75,9 @@ export class ProviderCredentialService {
         `Provider credentials not stored for account ${accountId}`,
       );
     }
-    return JSON.parse(decryptPayload(row.encryptedPayload, this.requireKey())) as Record<string, string>;
+    return JSON.parse(
+      decryptPayload(row.encryptedPayload, this.requireKey()),
+    ) as Record<string, string>;
   }
 
   async exists(accountId: string): Promise<boolean> {

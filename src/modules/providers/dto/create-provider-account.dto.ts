@@ -12,8 +12,9 @@ import {
 } from 'class-validator';
 
 export class CreateProviderAccountDto {
+  @IsOptional()
   @IsUUID()
-  organizationId!: string;
+  organizationId?: string;
 
   @IsUUID()
   applicationId!: string;

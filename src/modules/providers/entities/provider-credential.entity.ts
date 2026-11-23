@@ -17,8 +17,11 @@ export class ProviderCredential {
   @Column({ name: 'provider_account_id', type: 'uuid', unique: true })
   providerAccountId!: string;
 
-  @OneToOne(() => ProviderAccount)
-  @JoinColumn({ name: 'provider_account_id' })
+  @OneToOne(() => ProviderAccount, { onDelete: 'CASCADE' })
+  @JoinColumn({
+    name: 'provider_account_id',
+    foreignKeyConstraintName: 'FK_provider_credentials_provider_account_id',
+  })
   providerAccount!: ProviderAccount;
 
   @Column({ name: 'encrypted_payload', type: 'text' })

@@ -39,19 +39,22 @@ export class ProvidersService {
     actor: { organizationId: string | null; isSuperAdmin: boolean },
     filter: FilterDto,
   ): Promise<ProviderAccountModel[]> {
-    const rows = await this.accounts.find({ relations: { organization: true, application: true }, order: { createdAt: 'ASC' } });
-
     const organizationId = actor.isSuperAdmin
-      ? filter.organizationId ?? null
+      ? filter.organizationId
       : actor.organizationId;
+    if (!actor.isSuperAdmin && !organizationId) return [];
 
-    const filtered = rows.filter((r) => {
-      if (organizationId && r.organization.id !== organizationId) return false;
-      if (filter.applicationId && r.application.id !== filter.applicationId) return false;
-      return true;
+    const rows = await this.accounts.find({
+      where: {
+        ...(organizationId && { organization: { id: organizationId } }),
+        ...(filter.applicationId && {
+          application: { id: filter.applicationId },
+        }),
+      },
+      relations: { organization: true, application: true },
+      order: { createdAt: 'ASC' },
     });
-
-    return filtered.map((row) => toProviderAccountModel(row));
+    return rows.map((row) => toProviderAccountModel(row));
   }
 
   async findForContext(
