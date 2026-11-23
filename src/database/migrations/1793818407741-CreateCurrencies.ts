@@ -13,11 +13,6 @@ export class CreateCurrencies1793818407741 implements MigrationInterface {
             )
         `);
 
-    await queryRunner.query(`
-      INSERT INTO currencies (code, exponent, symbol) VALUES
-        ('EGP', 2, 'E£'), ('SAR', 2, '﷼'), ('USD', 2, '$'),
-        ('EUR', 2, '€'),  ('AED', 2, 'د.إ')
-    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
