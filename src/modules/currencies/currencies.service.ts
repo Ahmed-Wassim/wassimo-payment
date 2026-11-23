@@ -96,25 +96,12 @@ export class CurrenciesService {
   }
 
   minorToDecimal(
-    amountMinor: bigint | number | string,
+    amountMinor: bigint,
     exponent: number,
   ): string {
-    const value =
-      typeof amountMinor === 'bigint'
-        ? amountMinor
-        : BigInt(
-            typeof amountMinor === 'string'
-              ? amountMinor
-              : Math.trunc(amountMinor),
-          );
-    const negative = value < 0n;
-    const abs = negative ? -value : value;
-    if (exponent === 0) {
-      return `${negative ? '-' : ''}${abs.toString()}`;
-    }
-    const factor = 10n ** BigInt(exponent);
-    const whole = abs / factor;
-    const fraction = (abs % factor).toString().padStart(exponent, '0');
-    return `${negative ? '-' : ''}${whole.toString()}.${fraction}`;
+    const digits = amountMinor.toString().padStart(exponent + 1, '0');
+    return exponent === 0
+      ? digits
+      : `${digits.slice(0, -exponent)}.${digits.slice(-exponent)}`;
   }
 }
