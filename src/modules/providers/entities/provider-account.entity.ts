@@ -41,7 +41,7 @@ export class ProviderAccount {
   @Column({ name: 'display_name', type: 'text' })
   displayName!: string;
 
-  @Column({ type: 'text', default: 'disabled' })
+  @Column({ type: 'text', default: 'enabled' })
   status!: ProviderAccountStatus;
 
   @Column({ name: 'supported_currencies', type: 'jsonb' })
