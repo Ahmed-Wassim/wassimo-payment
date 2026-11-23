@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Organization } from '../../organizations/entities/organization.entity.ts';
 import { Application } from '../../applications/entities/application.entity.ts';
+import { Provider } from './provider.entity.ts';
 
 export type ProviderEnvironment = 'test' | 'live';
 
@@ -29,6 +30,10 @@ export class ProviderAccount {
 
   @Column({ name: 'provider_code', type: 'text' })
   providerCode!: string;
+
+  @ManyToOne(() => Provider, { nullable: false })
+  @JoinColumn({ name: 'provider_code', referencedColumnName: 'code' })
+  provider!: Provider;
 
   @Column({ type: 'text' })
   environment!: ProviderEnvironment;
