@@ -52,7 +52,7 @@ export class ProviderAccountsController {
 
   @Post()
   @UseGuards(JwtGuard, PermissionGuard)
-  @Permission('apps:update')
+  @Permission('apps:create')
   createAccount(
     @Req() req: { actor: ActorContext },
     @Body() dto: CreateProviderAccountDto,
@@ -74,7 +74,7 @@ export class ProviderAccountsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtGuard, PermissionGuard)
-  @Permission('apps:update')
+  @Permission('apps:delete')
   async removeAccount(
     @Req() req: { actor: ActorContext },
     @Param('id') id: string,
