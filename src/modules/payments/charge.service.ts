@@ -58,17 +58,6 @@ export class ChargeService {
       );
     }
 
-    const unresolved = await this.attempts.findOne({
-      where: { payment: { id: payment.id }, status: 'unknown' },
-    });
-    if (unresolved) {
-      throw new ApiError(
-        'unresolved_attempt',
-        HttpStatus.CONFLICT,
-        'an earlier attempt has an unknown outcome — resolve it first',
-      );
-    }
-
     if (!payment.providerAccountId || !payment.method) {
       throw new ApiError(
         'payment_not_chargeable',
@@ -101,16 +90,53 @@ export class ChargeService {
     const adapter = await this.factory.forAccount(account);
     const customer = await this.customers.forPayment(payment.id);
 
-    const attempt = await this.attempts.manager.transaction(async (tx) =>
-      tx.save(PaymentAttempt, {
+    const attempt = await this.attempts.manager.transaction(async (tx) => {
+      const currentPayment = await tx.findOne(Payment, {
+        where: {
+          id: payment.id,
+          organizationId: auth.organizationId,
+          applicationId: auth.applicationId,
+        },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!currentPayment) {
+        throw new ApiError(
+          'not_found',
+          HttpStatus.NOT_FOUND,
+          'payment not found',
+        );
+      }
+      if (currentPayment.status !== 'created') {
+        throw new ApiError(
+          'payment_not_chargeable',
+          HttpStatus.CONFLICT,
+          `payment status is '${currentPayment.status}'; only 'created' payments charge`,
+        );
+      }
+
+      const activeAttempt = await tx.findOne(PaymentAttempt, {
+        where: {
+          payment: { id: payment.id },
+          status: 'initiated',
+        },
+      });
+      if (activeAttempt) {
+        throw new ApiError(
+          'payment_not_chargeable',
+          HttpStatus.CONFLICT,
+          'a charge attempt is already in progress',
+        );
+      }
+
+      return tx.save(PaymentAttempt, {
         payment: { id: payment.id },
         organization: { id: payment.organizationId },
         providerAccount: { id: payment.providerAccountId! },
         operation: 'charge',
         status: 'initiated',
         diagnostics: {},
-      }),
-    );
+      });
+    });
 
     let providerReference: string | null = null;
     let redirectUrl: string | null = null;
