@@ -13,7 +13,10 @@ import { Organization } from '../../organizations/entities/organization.entity.t
 import { isUuid } from '../../../common/utils/is-uuid.ts';
 import { Provider, ProviderMethod } from '../provider.entity.ts';
 import { ProvidersService } from '../providers.service.ts';
-import { ProviderAccount } from './entity/provider-account.entity.ts';
+import {
+  ProviderAccount,
+  PROVIDER_ACCOUNT_STATUS,
+} from './entity/provider-account.entity.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
 import { UpdateProviderAccountDto } from './dto/update-provider-account.dto.ts';
 import {
@@ -67,7 +70,7 @@ export class ProviderAccountsService {
       where: {
         organization: { id: context.organizationId },
         application: { id: context.applicationId },
-        status: 'enabled',
+        status: PROVIDER_ACCOUNT_STATUS.ENABLED,
         ...(filter?.currency && {
           supportedCurrencies: JsonContains([filter.currency]),
         }),
@@ -154,7 +157,7 @@ export class ProviderAccountsService {
       supportedCurrencies: dto.supportedCurrencies,
       supportedMethods: dto.supportedMethods,
       config: dto.config ?? {},
-      status: 'enabled',
+      status: PROVIDER_ACCOUNT_STATUS.ENABLED,
     });
     const saved = await this.accounts.save(row);
     return toProviderAccountModel(saved);

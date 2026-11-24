@@ -9,6 +9,8 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
+import { PROVIDER_ACCOUNT_STATUS } from '../entity/provider-account.entity.ts';
+import type { ProviderAccountStatus } from '../entity/provider-account.entity.ts';
 
 export class UpdateProviderAccountDto {
   @IsOptional()
@@ -39,6 +41,6 @@ export class UpdateProviderAccountDto {
   config?: Record<string, unknown>;
 
   @IsOptional()
-  @IsIn(['enabled', 'disabled'])
-  status?: 'enabled' | 'disabled';
+  @IsIn(Object.values(PROVIDER_ACCOUNT_STATUS))
+  status?: ProviderAccountStatus;
 }

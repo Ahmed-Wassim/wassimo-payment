@@ -13,7 +13,13 @@ import { Provider } from '../../provider.entity.ts';
 
 export type ProviderEnvironment = 'test' | 'live';
 
-export type ProviderAccountStatus = 'enabled' | 'disabled';
+export const PROVIDER_ACCOUNT_STATUS = {
+  ENABLED: 'enabled',
+  DISABLED: 'disabled',
+} as const;
+
+export type ProviderAccountStatus =
+  (typeof PROVIDER_ACCOUNT_STATUS)[keyof typeof PROVIDER_ACCOUNT_STATUS];
 
 @Entity('provider_accounts')
 export class ProviderAccount {
@@ -41,7 +47,7 @@ export class ProviderAccount {
   @Column({ name: 'display_name', type: 'text' })
   displayName!: string;
 
-  @Column({ type: 'text', default: 'enabled' })
+  @Column({ type: 'text', default: PROVIDER_ACCOUNT_STATUS.ENABLED })
   status!: ProviderAccountStatus;
 
   @Column({ name: 'supported_currencies', type: 'jsonb' })
