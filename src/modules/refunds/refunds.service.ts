@@ -34,8 +34,8 @@ export class RefundsService {
       throw new ApiError('validation_error', HttpStatus.BAD_REQUEST, 'amount_minor must be a positive integer');
     }
 
-    const payment = await this.payments.loadById(paymentId);
-    if (!payment || payment.organizationId !== auth.organizationId) {
+    const payment = await this.payments.loadById(paymentId, auth);
+    if (!payment) {
       throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'payment not found');
     }
     if (payment.status !== 'succeeded') {
@@ -126,8 +126,9 @@ export class RefundsService {
     if (!isUuid(paymentId) || !isUuid(refundId)) {
       throw new ApiError('validation_error', HttpStatus.BAD_REQUEST, 'malformed refund path');
     }
+    const payment = await this.payments.loadById(paymentId, auth);
     const refund = await this.refunds.findOne({ where: { id: refundId, paymentId } });
-    if (!refund || refund.organizationId !== auth.organizationId) {
+    if (!payment || !refund || refund.organizationId !== auth.organizationId) {
       throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'refund not found');
     }
     if (refund.status !== 'unknown' && refund.status !== 'processing') {

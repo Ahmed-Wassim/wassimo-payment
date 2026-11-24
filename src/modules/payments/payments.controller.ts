@@ -55,7 +55,7 @@ export class PaymentsController {
       )
     ).id;
 
-    const payment = await this.payments.loadById(id);
+    const payment = await this.payments.loadById(id, req.auth!);
     if (!payment) {
       throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'payment not found');
     }
@@ -73,8 +73,8 @@ export class PaymentsController {
       );
     }
 
-    const payment = await this.payments.loadById(id);
-    if (!payment || payment.organizationId !== req.auth!.organizationId) {
+    const payment = await this.payments.loadById(id, req.auth!);
+    if (!payment) {
       throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'payment not found');
     }
 

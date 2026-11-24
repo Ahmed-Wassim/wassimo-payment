@@ -41,8 +41,8 @@ export class ChargeService {
       );
     }
 
-    const payment = await this.payments.loadById(paymentId);
-    if (!payment || payment.organizationId !== auth.organizationId) {
+    const payment = await this.payments.loadById(paymentId, auth);
+    if (!payment) {
       throw new ApiError(
         'not_found',
         HttpStatus.NOT_FOUND,

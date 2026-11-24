@@ -74,8 +74,17 @@ export class PaymentsService {
     }
   }
 
-  async loadById(id: string): Promise<Payment | null> {
-    return this.repo.findOne({ where: { id } });
+  async loadById(
+    id: string,
+    auth: AuthContext,
+  ): Promise<Payment | null> {
+    return this.repo.findOne({
+      where: {
+        id,
+        organizationId: auth.organizationId,
+        applicationId: auth.applicationId,
+      },
+    });
   }
 
   async customerFor(paymentId: string) {
