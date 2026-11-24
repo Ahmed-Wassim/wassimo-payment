@@ -3,13 +3,22 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiError } from '../../common/errors/api-error.ts';
 import { OutboxService } from '../../outbox/outbox.service.ts';
-import { ProviderResult } from '../providers/integrations/adapter.ts';
+import {
+  ProviderResult,
+  PROVIDER_RESULT,
+} from '../providers/integrations/adapter.ts';
 import { PaymentProviderFactory } from '../providers/integrations/payment-provider.factory.ts';
 import { attemptTransition } from '../payments/attempt-states.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { Payment } from '../payments/entities/payment.entity.ts';
-import { transition } from '../payments/states.ts';
-import { WebhookEvent, WebhookEventStatus, WebhookIngestStatus } from './entities/webhook-event.entity.ts';
+import { PAYMENT_STATUS, transition } from '../payments/states.ts';
+import {
+  WEBHOOK_EVENT_STATUS,
+  WEBHOOK_INGEST_STATUS,
+  WebhookEvent,
+  WebhookEventStatus,
+  WebhookIngestStatus,
+} from './entities/webhook-event.entity.ts';
 import { findAttemptForProvider } from '../providers/integrations/provider-attempt.lookup.ts';
 
 @Injectable()
@@ -62,20 +71,25 @@ export class WebhooksService {
         providerEventId: null,
         eventType: event.eventType,
         rawPayload: event.raw as Record<string, unknown>,
-        status: 'pending',
+        status: WEBHOOK_EVENT_STATUS.PENDING,
       });
     }
 
     if (row === null) {
-      return { status: 'duplicate' };
+      return { status: WEBHOOK_INGEST_STATUS.DUPLICATE };
     }
 
     const target =
-      event.result === 'succeeded' || event.result === 'failed'
+      event.result === PROVIDER_RESULT.SUCCEEDED ||
+      event.result === PROVIDER_RESULT.FAILED
         ? event.result
         : null;
 
-    const status: WebhookEventStatus = await this.applyEvent(row.id, attempt, target);
+    const status: WebhookEventStatus = await this.applyEvent(
+      row.id,
+      attempt,
+      target,
+    );
     return { status };
   }
 
@@ -88,7 +102,7 @@ export class WebhooksService {
     const inserted: { id: string }[] = await this.events.query(
       `INSERT INTO webhook_events
           (provider_account_id, provider_event_id, event_type, raw_payload, status)
-        VALUES ($1, $2, $3, $4::jsonb, 'pending')
+        VALUES ($1, $2, $3, $4::jsonb, $5)
         ON CONFLICT DO NOTHING
         RETURNING id`,
       [
@@ -96,6 +110,7 @@ export class WebhooksService {
         event.providerEventId,
         event.eventType,
         JSON.stringify(event.rawPayload),
+        WEBHOOK_EVENT_STATUS.PENDING,
       ],
     );
 
@@ -113,7 +128,10 @@ export class WebhooksService {
         [event.providerEventId, event.providerAccountId],
       );
 
-    if (existing.length && existing[0].status === 'pending') {
+    if (
+      existing.length &&
+      existing[0].status === WEBHOOK_EVENT_STATUS.PENDING
+    ) {
       return this.events.findOneByOrFail({ id: existing[0].id });
     }
 
@@ -123,15 +141,22 @@ export class WebhooksService {
   private async applyEvent(
     rowId: string,
     attempt: PaymentAttempt | null,
-    target: Exclude<ProviderResult, 'pending' | 'unknown'> | null,
+    target: Exclude<
+      ProviderResult,
+      typeof PROVIDER_RESULT.PENDING | typeof PROVIDER_RESULT.UNKNOWN
+    > | null,
   ): Promise<WebhookEventStatus> {
     if (!attempt || !target) {
       const reason = !attempt ? 'unmatched_reference' : 'event_carries_no_outcome';
       await this.events.update(
         { id: rowId },
-        { status: 'ignored', error: reason, processedAt: new Date() },
+        {
+          status: WEBHOOK_EVENT_STATUS.IGNORED,
+          error: reason,
+          processedAt: new Date(),
+        },
       );
-      return 'ignored';
+      return WEBHOOK_EVENT_STATUS.IGNORED;
     }
 
     return this.events.manager.transaction(async (tx) => {
@@ -157,13 +182,15 @@ export class WebhooksService {
       if (payment.status !== target) {
         try {
           let current = payment.status;
-          if (current === 'created') {
-            transition('created', 'processing');
-            await tx.update(Payment, { id: payment.id }, { status: 'processing' });
-            current = 'processing';
+          if (current === PAYMENT_STATUS.CREATED) {
+            transition(PAYMENT_STATUS.CREATED, PAYMENT_STATUS.PROCESSING);
+            await tx.update(Payment, { id: payment.id }, {
+              status: PAYMENT_STATUS.PROCESSING,
+            });
+            current = PAYMENT_STATUS.PROCESSING;
           }
           transition(current, target);
-          if (target === 'succeeded') {
+          if (target === PROVIDER_RESULT.SUCCEEDED) {
             await tx.update(Payment, { id: payment.id }, {
               status: target,
               capturedMinor: payment.amountMinor,
@@ -177,10 +204,12 @@ export class WebhooksService {
         }
       }
 
-      const status: WebhookEventStatus = refusals.length ? 'ignored' : 'processed';
-      if (status === 'processed' && paymentApplied) {
+      const status: WebhookEventStatus = refusals.length
+        ? WEBHOOK_EVENT_STATUS.IGNORED
+        : WEBHOOK_EVENT_STATUS.PROCESSED;
+      if (status === WEBHOOK_EVENT_STATUS.PROCESSED && paymentApplied) {
         const updated = await tx.findOneByOrFail(Payment, { id: payment.id });
-        if (target === 'succeeded') {
+        if (target === PROVIDER_RESULT.SUCCEEDED) {
           await this.outbox.writeSucceeded(tx, updated);
         } else {
           await this.outbox.writeFailed(tx, updated);

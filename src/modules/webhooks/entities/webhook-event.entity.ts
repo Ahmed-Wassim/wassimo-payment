@@ -5,9 +5,22 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-export type WebhookEventStatus = 'pending' | 'processed' | 'ignored';
+export const WEBHOOK_EVENT_STATUS = {
+  PENDING: 'pending',
+  PROCESSED: 'processed',
+  IGNORED: 'ignored',
+} as const;
 
-export type WebhookIngestStatus = WebhookEventStatus | 'duplicate';
+export type WebhookEventStatus =
+  (typeof WEBHOOK_EVENT_STATUS)[keyof typeof WEBHOOK_EVENT_STATUS];
+
+export const WEBHOOK_INGEST_STATUS = {
+  DUPLICATE: 'duplicate',
+} as const;
+
+export type WebhookIngestStatus =
+  | WebhookEventStatus
+  | (typeof WEBHOOK_INGEST_STATUS)[keyof typeof WEBHOOK_INGEST_STATUS];
 
 @Entity('webhook_events')
 export class WebhookEvent {
@@ -26,7 +39,7 @@ export class WebhookEvent {
   @Column({ name: 'raw_payload', type: 'jsonb' })
   rawPayload!: Record<string, unknown>;
 
-  @Column({ type: 'text', default: 'pending' })
+  @Column({ type: 'text', default: WEBHOOK_EVENT_STATUS.PENDING })
   status!: WebhookEventStatus;
 
   @Column({ type: 'text', nullable: true })
