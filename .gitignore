@@ -56,3 +56,6 @@ docs/
 
 # drill transcripts (dev credentials inside, never commit)
 transcript/
+
+# Postman/Bruno local collection
+postman/
