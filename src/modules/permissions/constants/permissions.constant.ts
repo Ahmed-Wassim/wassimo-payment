@@ -9,6 +9,7 @@ export const PERMISSIONS = [
   { code: 'apps:read', name: 'View applications', groupName: 'applications' },
   { code: 'apps:create', name: 'Create applications', groupName: 'applications' },
   { code: 'apps:update', name: 'Edit applications', groupName: 'applications' },
+  { code: 'apps:delete', name: 'Delete applications', groupName: 'applications' },
   // keys
   { code: 'keys:read', name: 'View API keys', groupName: 'keys' },
   { code: 'keys:issue', name: 'Issue API keys', groupName: 'keys' },

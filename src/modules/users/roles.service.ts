@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, IsNull, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { ORG_ADMIN_PERMISSION_GROUPS } from '../permissions/constants/permissions.constant.ts';
 import { OrgMembership } from './entities/org-membership.entity.ts';
@@ -29,12 +29,6 @@ export class RolesService {
     @InjectRepository(OrgMembership)
     private readonly memberships: Repository<OrgMembership>,
   ) {}
-
-  async findPlatformAdminRole(): Promise<Role | null> {
-    return this.roles.findOne({
-      where: { name: 'Super Admin', organizationId: IsNull() },
-    });
-  }
 
   async findRoleById(id: string): Promise<Role> {
     if (!isUuid(id)) {

@@ -3,25 +3,45 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
+  ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import type { AttemptStatus } from '../attempt-states.ts';
+import { Organization } from '../../organizations/entities/organization.entity.ts';
+import { ProviderAccount } from '../../providers/entities/provider-account.entity.ts';
+import { Payment } from './payment.entity.ts';
 
 @Entity('payment_attempts')
-@Index('payment_attempts_payment', ['paymentId'])
+@Index('payment_attempts_payment', ['payment'])
+@Index('payment_attempts_provider_reference', ['providerReference'], {
+  where: '"provider_reference" IS NOT NULL',
+})
 export class PaymentAttempt {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'payment_id', type: 'uuid' })
-  paymentId!: string;
+  @ManyToOne(() => Payment, { nullable: false })
+  @JoinColumn({
+    name: 'payment_id',
+    foreignKeyConstraintName: 'FK_payment_attempts_payment_id',
+  })
+  payment!: Payment;
 
-  @Column({ name: 'organization_id', type: 'uuid' })
-  organizationId!: string;
+  @ManyToOne(() => Organization, { nullable: false })
+  @JoinColumn({
+    name: 'organization_id',
+    foreignKeyConstraintName: 'FK_payment_attempts_organization_id',
+  })
+  organization!: Organization;
 
-  @Column({ name: 'provider_account_id', type: 'uuid' })
-  providerAccountId!: string;
+  @ManyToOne(() => ProviderAccount, { nullable: false })
+  @JoinColumn({
+    name: 'provider_account_id',
+    foreignKeyConstraintName: 'FK_payment_attempts_provider_account_id',
+  })
+  providerAccount!: ProviderAccount;
 
   @Column({ type: 'text', default: 'charge' })
   operation!: string;

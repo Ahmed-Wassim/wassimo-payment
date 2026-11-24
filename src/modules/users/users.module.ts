@@ -10,6 +10,7 @@ import { UsersController } from './users.controller.ts';
 import { RolesController } from './roles.controller.ts';
 import { AuthModule } from '../auth/auth.module.ts';
 import { RolesService } from './roles.service.ts';
+import { SuperAdminUserSeeder } from './seeder/super-admin-user.seeder.ts';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { RolesService } from './roles.service.ts';
     forwardRef(() => AuthModule),
   ],
   controllers: [UsersController, RolesController],
-  providers: [UsersService, RolesService],
-  exports: [UsersService, RolesService],
+  providers: [UsersService, RolesService, SuperAdminUserSeeder],
+  exports: [UsersService, RolesService, SuperAdminUserSeeder],
 })
 export class UsersModule {}

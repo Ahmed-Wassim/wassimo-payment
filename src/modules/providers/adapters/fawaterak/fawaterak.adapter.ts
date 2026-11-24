@@ -16,17 +16,15 @@ import {
 } from '../../adapter/adapter.ts';
 import { PROVIDER_CODE } from '../../provider-code.ts';
 import { ProviderCredentialService } from '../../provider-credential.service.ts';
+import { findAttemptForProvider } from '../../provider-attempt.lookup.ts';
 
 export class FawaterakAdapter implements ProviderAdapter {
   readonly providerCode = PROVIDER_CODE.Fawaterak;
-
-  private oauthTokenCache: { token: string; expiresAt: number } | null = null;
 
   constructor(
     private readonly currencies: CurrenciesService,
     private readonly credentialsService: ProviderCredentialService,
     private readonly attempts: Repository<PaymentAttempt>,
-    private readonly accounts: Repository<ProviderAccount>,
     private readonly bound: { account: ProviderAccount; credentials: Record<string, string> } | null,
   ) {}
 
@@ -136,12 +134,15 @@ export class FawaterakAdapter implements ProviderAdapter {
     if (this.bound) {
       return { config: (this.bound.account.config ?? {}) as any, credentials: this.bound.credentials };
     }
-    const attempt = await this.attempts.findOne({ where: { providerReference } });
+    const attempt = await findAttemptForProvider(
+      this.attempts,
+      providerReference,
+      this.providerCode,
+    );
     if (!attempt) throw new ProviderConfigError('fawaterak: attempt not found');
-    const account = await this.accounts.findOne({ where: { id: attempt.providerAccountId } });
-    if (!account) throw new ProviderConfigError('fawaterak: account not found');
-    const credentials = await this.credentialsService.load(account!.id);
-    return { config: (account!.config ?? {}) as any, credentials };
+    const account = attempt.providerAccount;
+    const credentials = await this.credentialsService.load(account.id);
+    return { config: (account.config ?? {}) as any, credentials };
   }
 
   async verifyWebhook(
@@ -159,10 +160,14 @@ export class FawaterakAdapter implements ProviderAdapter {
     if (!transactionKey) return null;
 
     const providerReference = String(transactionKey);
-    const attempt = await this.attempts.findOne({ where: { providerReference } });
+    const attempt = await findAttemptForProvider(
+      this.attempts,
+      providerReference,
+      this.providerCode,
+    );
     if (!attempt) return null;
 
-    const creds = await this.credentialsService.load(attempt.providerAccountId).catch(() => null);
+    const creds = await this.credentialsService.load(attempt.providerAccount.id).catch(() => null);
     const vendorKey = creds?.vendor_api_key || creds?.api_key;
     if (!vendorKey) return null;
 
@@ -172,8 +177,7 @@ export class FawaterakAdapter implements ProviderAdapter {
     const expected = createHmac('sha256', vendorKey).update(signed).digest('hex');
     if (!this.safeEqual(expected, String(receivedHash))) return null;
 
-    const account = await this.accounts.findOne({ where: { id: attempt.providerAccountId } });
-    if (!account) return null;
+    const account = attempt.providerAccount;
     const tx = await this.getTransaction(providerReference, account.config as any, creds as any).catch(() => null);
     if (!tx) return null;
     const result = this.outcomeFromTransaction(tx, status);
@@ -223,11 +227,6 @@ export class FawaterakAdapter implements ProviderAdapter {
   }
 
   private async accessToken(baseUrl: string, credentials: Record<string, string>): Promise<string> {
-    const now = Date.now();
-    const cacheKey = `${baseUrl}:${credentials.client_id}`;
-    if (this.oauthTokenCache && this.oauthTokenCache.expiresAt > now) {
-      return this.oauthTokenCache.token;
-    }
     const res = await fetch(`${baseUrl}/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -241,8 +240,6 @@ export class FawaterakAdapter implements ProviderAdapter {
     if (!res.ok || !data?.access_token) {
       throw new ProviderConfigError('fawaterak: failed to obtain access token');
     }
-    const expiresIn = typeof data.expires_in === 'number' ? data.expires_in : 3600;
-    this.oauthTokenCache = { token: data.access_token, expiresAt: now + (expiresIn - 60) * 1000 };
     return data.access_token;
   }
 }

@@ -22,8 +22,6 @@ export class PaymentProviderFactory {
     private readonly currencies: CurrenciesService,
     @InjectRepository(PaymentAttempt)
     private readonly attempts: Repository<PaymentAttempt>,
-    @InjectRepository(ProviderAccount)
-    private readonly accounts: Repository<ProviderAccount>,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -51,14 +49,12 @@ export class PaymentProviderFactory {
           this.currencies,
           this.credentials,
           this.attempts,
-          this.accounts,
           bound,
         );
       case PROVIDER_CODE.Paymob:
         return new PaymobAdapter(
           this.credentials,
           this.attempts,
-          this.accounts,
           bound,
         );
       case PROVIDER_CODE.Fawaterak:
@@ -66,7 +62,6 @@ export class PaymentProviderFactory {
           this.currencies,
           this.credentials,
           this.attempts,
-          this.accounts,
           bound,
         );
     }
@@ -89,14 +84,12 @@ export class PaymentProviderFactory {
           this.currencies,
           this.credentials,
           this.attempts,
-          this.accounts,
           null,
         );
       case PROVIDER_CODE.Paymob:
         return new PaymobAdapter(
           this.credentials,
           this.attempts,
-          this.accounts,
           null,
         );
       case PROVIDER_CODE.Fawaterak:
@@ -104,7 +97,6 @@ export class PaymentProviderFactory {
           this.currencies,
           this.credentials,
           this.attempts,
-          this.accounts,
           null,
         );
     }

@@ -20,17 +20,12 @@ export class MockAdapter implements ProviderAdapter {
   constructor(private readonly hosted: MockHostedService) {}
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutResult> {
-    const webhookSecret =
-      typeof input.accountConfig?.hmacSecret === 'string'
-        ? input.accountConfig.hmacSecret
-        : undefined;
     const session = this.hosted.openSession(
       input.paymentId,
       input.amountMinor,
       input.currency,
       input.method,
       input.customerDetails ?? null,
-      webhookSecret,
     );
     return {
       providerReference: session.sessionRef,
@@ -79,7 +74,7 @@ export class MockAdapter implements ProviderAdapter {
       return null;
     }
 
-    const secret = this.hosted.webhookSecretFor(body.provider_reference ?? '');
+    const secret = this.hosted.webhookSecret();
     const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
 
     const signatureBuf = Buffer.from(signature);

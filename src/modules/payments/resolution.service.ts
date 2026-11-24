@@ -57,7 +57,8 @@ export class ResolutionService {
       : ['unknown', 'initiated'];
     const attempt = await this.attempts
       .createQueryBuilder('a')
-      .where('a.paymentId = :pid', { pid: payment.id })
+      .leftJoinAndSelect('a.providerAccount', 'providerAccount')
+      .where('a.payment_id = :pid', { pid: payment.id })
       .andWhere('a.status IN (:...statuses)', {
         statuses: selectableStatuses,
       })
@@ -75,7 +76,7 @@ export class ResolutionService {
 
     let account;
     try {
-      account = await this.providers.requireById(attempt.providerAccountId);
+      account = await this.providers.requireById(attempt.providerAccount.id);
     } catch (e) {
       if (e instanceof NotFoundException) {
         throw new ApiError(

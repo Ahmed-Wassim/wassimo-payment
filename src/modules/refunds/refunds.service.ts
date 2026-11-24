@@ -50,6 +50,7 @@ export class RefundsService {
     const attempt = await this.dataSource
       .getRepository(PaymentAttempt)
       .createQueryBuilder('a')
+      .leftJoinAndSelect('a.providerAccount', 'providerAccount')
       .where('a.payment_id = :pid', { pid: payment.id })
       .andWhere("a.status = 'succeeded'")
       .orderBy('a.created_at', 'DESC')
@@ -60,7 +61,7 @@ export class RefundsService {
 
     let account;
     try {
-      account = await this.providers.requireById(attempt.providerAccountId);
+      account = await this.providers.requireById(attempt.providerAccount.id);
     } catch (e) {
       if (e instanceof NotFoundException) {
         throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this organization');
@@ -138,13 +139,17 @@ export class RefundsService {
 
     const attempt = await this.dataSource
       .getRepository(PaymentAttempt)
-      .findOne({ where: { paymentId, status: 'succeeded' }, order: { createdAt: 'DESC' } });
+      .findOne({
+        where: { payment: { id: paymentId }, status: 'succeeded' },
+        relations: { providerAccount: true },
+        order: { createdAt: 'DESC' },
+      });
     if (!attempt) {
       throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this organization');
     }
     let account;
     try {
-      account = await this.providers.requireById(attempt.providerAccountId);
+      account = await this.providers.requireById(attempt.providerAccount.id);
     } catch (e) {
       if (e instanceof NotFoundException) {
         throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this organization');

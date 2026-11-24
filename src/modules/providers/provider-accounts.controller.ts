@@ -52,7 +52,7 @@ export class ProviderAccountsController {
 
   @Post()
   @UseGuards(JwtGuard, PermissionGuard)
-  @Permission('org:members:manage')
+  @Permission('apps:create')
   createAccount(
     @Req() req: { actor: ActorContext },
     @Body() dto: CreateProviderAccountDto,
@@ -62,7 +62,7 @@ export class ProviderAccountsController {
 
   @Patch(':id')
   @UseGuards(JwtGuard, PermissionGuard)
-  @Permission('org:members:manage')
+  @Permission('apps:update')
   updateAccount(
     @Req() req: { actor: ActorContext },
     @Param('id') id: string,
@@ -74,7 +74,7 @@ export class ProviderAccountsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtGuard, PermissionGuard)
-  @Permission('org:members:manage')
+  @Permission('apps:delete')
   async removeAccount(
     @Req() req: { actor: ActorContext },
     @Param('id') id: string,
@@ -85,7 +85,7 @@ export class ProviderAccountsController {
   @Post(':id/credentials')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(JwtGuard, PermissionGuard)
-  @Permission('org:members:manage')
+  @Permission('apps:update')
   async setCredentials(
     @Req() req: { actor: ActorContext },
     @Param('id') id: string,

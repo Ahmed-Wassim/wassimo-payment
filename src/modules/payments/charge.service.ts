@@ -59,7 +59,7 @@ export class ChargeService {
     }
 
     const unresolved = await this.attempts.findOne({
-      where: { paymentId: payment.id, status: 'unknown' },
+      where: { payment: { id: payment.id }, status: 'unknown' },
     });
     if (unresolved) {
       throw new ApiError(
@@ -103,9 +103,9 @@ export class ChargeService {
 
     const attempt = await this.attempts.manager.transaction(async (tx) =>
       tx.save(PaymentAttempt, {
-        paymentId: payment.id,
-        organizationId: payment.organizationId,
-        providerAccountId: payment.providerAccountId!,
+        payment: { id: payment.id },
+        organization: { id: payment.organizationId },
+        providerAccount: { id: payment.providerAccountId! },
         operation: 'charge',
         status: 'initiated',
         diagnostics: {},
@@ -123,7 +123,6 @@ export class ChargeService {
         amountMinor: BigInt(payment.amountMinor),
         currency: payment.currency,
         method: payment.method,
-        accountConfig: (account.config ?? {}) as Record<string, unknown>,
         customerDetails: customer ? toCustomerDetails(customer) : null,
       });
       providerReference = result.providerReference;
