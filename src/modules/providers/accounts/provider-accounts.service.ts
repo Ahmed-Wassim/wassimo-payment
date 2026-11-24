@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { JsonContains, Repository } from 'typeorm';
 import { ApiError } from '../../../common/errors/api-error.ts';
 import { FilterDto } from '../../../common/dto/filter.dto.ts';
 import { Application } from '../../applications/entities/application.entity.ts';
@@ -63,22 +63,19 @@ export class ProviderAccountsService {
     context: { organizationId: string; applicationId: string },
     filter?: { currency?: string; method?: string },
   ): Promise<ProviderAccount[]> {
-    const qb = this.accounts
-      .createQueryBuilder('a')
-      .where('a.organization_id = :orgId', { orgId: context.organizationId })
-      .andWhere('a.application_id = :appId', { appId: context.applicationId })
-      .andWhere('a.status = :status', { status: 'enabled' });
-    if (filter?.currency) {
-      qb.andWhere('a.supported_currencies @> :currencies::jsonb', {
-        currencies: JSON.stringify([filter.currency]),
-      });
-    }
-    if (filter?.method) {
-      qb.andWhere('a.supported_methods @> :methods::jsonb', {
-        methods: JSON.stringify([filter.method]),
-      });
-    }
-    return qb.getMany();
+    return this.accounts.find({
+      where: {
+        organization: { id: context.organizationId },
+        application: { id: context.applicationId },
+        status: 'enabled',
+        ...(filter?.currency && {
+          supportedCurrencies: JsonContains([filter.currency]),
+        }),
+        ...(filter?.method && {
+          supportedMethods: JsonContains([filter.method]),
+        }),
+      },
+    });
   }
 
   async requireById(id: string): Promise<ProviderAccount> {
