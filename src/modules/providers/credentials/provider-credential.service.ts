@@ -1,11 +1,11 @@
 import { HttpStatus, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
-import { APP_CONFIG } from '../../config/config.module.ts';
-import type { AppConfig } from '../../config/configuration.ts';
-import { ApiError } from '../../common/errors/api-error.ts';
-import { ProviderAccount } from './entities/provider-account.entity.ts';
-import { ProviderCredential } from './entities/provider-credential.entity.ts';
+import { APP_CONFIG } from '../../../config/config.module.ts';
+import type { AppConfig } from '../../../config/configuration.ts';
+import { ApiError } from '../../../common/errors/api-error.ts';
+import { ProviderAccount } from '../accounts/entity/provider-account.entity.ts';
+import { ProviderCredential } from './entity/provider-credential.entity.ts';
 import { decryptPayload, encryptPayload } from './crypto.ts';
 
 const UNIQUE_VIOLATION = '23505';

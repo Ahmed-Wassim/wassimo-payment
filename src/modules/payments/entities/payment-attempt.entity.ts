@@ -10,7 +10,7 @@ import {
 } from 'typeorm';
 import type { AttemptStatus } from '../attempt-states.ts';
 import { Organization } from '../../organizations/entities/organization.entity.ts';
-import { ProviderAccount } from '../../providers/entities/provider-account.entity.ts';
+import { ProviderAccount } from '../../providers/accounts/entity/provider-account.entity.ts';
 import { Payment } from './payment.entity.ts';
 
 @Entity('payment_attempts')

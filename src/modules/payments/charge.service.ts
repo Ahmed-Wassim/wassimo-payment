@@ -6,9 +6,9 @@ import { ApiError } from '../../common/errors/api-error.ts';
 import {
   ProviderConfigError,
   ProviderTimeoutError,
-} from '../providers/adapter/adapter.ts';
-import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
-import { ProvidersService } from '../providers/providers.service.ts';
+} from '../providers/integrations/adapter.ts';
+import { PaymentProviderFactory } from '../providers/integrations/payment-provider.factory.ts';
+import { ProviderAccountsService } from '../providers/accounts/provider-accounts.service.ts';
 import { attemptTransition, ChargeOutcome } from './attempt-states.ts';
 import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { Payment } from './entities/payment.entity.ts';
@@ -24,7 +24,7 @@ export class ChargeService {
     @InjectRepository(PaymentAttempt)
     private readonly attempts: Repository<PaymentAttempt>,
     private readonly payments: PaymentsService,
-    private readonly providers: ProvidersService,
+    private readonly providers: ProviderAccountsService,
     private readonly factory: PaymentProviderFactory,
     private readonly customers: CustomersService,
   ) {}

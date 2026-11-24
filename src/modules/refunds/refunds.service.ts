@@ -4,11 +4,11 @@ import { DataSource, EntityManager, Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
-import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
-import { ProvidersService } from '../providers/providers.service.ts';
+import { PaymentProviderFactory } from '../providers/integrations/payment-provider.factory.ts';
+import { ProviderAccountsService } from '../providers/accounts/provider-accounts.service.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { PaymentsService } from '../payments/payments.service.ts';
-import { ProviderOutcomeResult, ProviderTimeoutError } from '../providers/adapter/adapter.ts';
+import { ProviderOutcomeResult, ProviderTimeoutError } from '../providers/integrations/adapter.ts';
 import { refundTransition, type RefundStatus } from './refund-states.ts';
 import { Refund } from './entities/refund.entity.ts';
 
@@ -18,7 +18,7 @@ export class RefundsService {
     @InjectRepository(Refund) private readonly refunds: Repository<Refund>,
     private readonly dataSource: DataSource,
     private readonly payments: PaymentsService,
-    private readonly providers: ProvidersService,
+    private readonly providers: ProviderAccountsService,
     private readonly factory: PaymentProviderFactory,
   ) {}
 

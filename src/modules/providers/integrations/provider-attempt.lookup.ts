@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
+import { PaymentAttempt } from '../../payments/entities/payment-attempt.entity.ts';
 
 export async function findAttemptForProvider(
   attempts: Repository<PaymentAttempt>,

@@ -1,6 +1,5 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
-import { Provider } from './entities/provider.entity.ts';
-import { toProviderModel } from './mappers/provider.mapper.ts';
+import { ProviderModel, toProviderModel } from './provider.mapper.ts';
 import { Permission } from '../auth/permission.decorator.ts';
 import { PermissionGuard } from '../auth/permission.guard.ts';
 import { JwtGuard } from '../auth/jwt.guard.ts';
@@ -13,7 +12,7 @@ export class ProvidersController {
   @Get()
   @UseGuards(JwtGuard, PermissionGuard)
   @Permission('apps:read')
-  listProviders(): Promise<Provider[]> {
+  listProviders(): Promise<ProviderModel[]> {
     return this.service.listProviders();
   }
 

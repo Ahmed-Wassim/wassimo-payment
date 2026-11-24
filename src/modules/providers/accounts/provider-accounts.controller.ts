@@ -12,21 +12,21 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
-import { Permission } from '../auth/permission.decorator.ts';
-import { PermissionGuard } from '../auth/permission.guard.ts';
-import { FilterDto } from '../../common/dto/filter.dto.ts';
-import { SetProviderCredentialsDto } from './dto/set-provider-credentials.dto.ts';
+import { ActorContext, JwtGuard } from '../../auth/jwt.guard.ts';
+import { Permission } from '../../auth/permission.decorator.ts';
+import { PermissionGuard } from '../../auth/permission.guard.ts';
+import { FilterDto } from '../../../common/dto/filter.dto.ts';
+import { SetProviderCredentialsDto } from '../credentials/dto/set-provider-credentials.dto.ts';
+import { ProviderCredentialService } from '../credentials/provider-credential.service.ts';
 import { CreateProviderAccountDto } from './dto/create-provider-account.dto.ts';
 import { UpdateProviderAccountDto } from './dto/update-provider-account.dto.ts';
-import { ProviderAccountModel } from './mappers/provider-account.mapper.ts';
-import { ProviderCredentialService } from './provider-credential.service.ts';
-import { ProvidersService } from './providers.service.ts';
+import { ProviderAccountModel } from './mapper/provider-account.mapper.ts';
+import { ProviderAccountsService } from './provider-accounts.service.ts';
 
 @Controller('provider-accounts')
 export class ProviderAccountsController {
   constructor(
-    private readonly service: ProvidersService,
+    private readonly service: ProviderAccountsService,
     private readonly credentials: ProviderCredentialService,
   ) {}
 

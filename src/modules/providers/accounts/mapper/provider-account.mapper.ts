@@ -1,6 +1,6 @@
-import { ProviderAccount, ProviderAccountStatus, ProviderEnvironment } from '../entities/provider-account.entity.ts';
-import { toOrganizationModel, OrganizationModel } from '../../organizations/mappers/organization.mapper.ts';
-import { toApplicationModel, ApplicationModel } from '../../applications/mappers/application.mapper.ts';
+import { ProviderAccount, ProviderAccountStatus, ProviderEnvironment } from '../entity/provider-account.entity.ts';
+import { toOrganizationModel, OrganizationModel } from '../../../organizations/mappers/organization.mapper.ts';
+import { toApplicationModel, ApplicationModel } from '../../../applications/mappers/application.mapper.ts';
 
 export class ProviderAccountModel {
   id!: string;

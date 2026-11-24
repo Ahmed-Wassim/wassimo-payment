@@ -3,14 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiError } from '../../common/errors/api-error.ts';
 import { OutboxService } from '../../outbox/outbox.service.ts';
-import { ProviderResult } from '../providers/adapter/adapter.ts';
-import { PaymentProviderFactory } from '../providers/factories/payment-provider.factory.ts';
+import { ProviderResult } from '../providers/integrations/adapter.ts';
+import { PaymentProviderFactory } from '../providers/integrations/payment-provider.factory.ts';
 import { attemptTransition } from '../payments/attempt-states.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { Payment } from '../payments/entities/payment.entity.ts';
 import { transition } from '../payments/states.ts';
 import { WebhookEvent, WebhookEventStatus, WebhookIngestStatus } from './entities/webhook-event.entity.ts';
-import { findAttemptForProvider } from '../providers/provider-attempt.lookup.ts';
+import { findAttemptForProvider } from '../providers/integrations/provider-attempt.lookup.ts';
 
 @Injectable()
 export class WebhooksService {

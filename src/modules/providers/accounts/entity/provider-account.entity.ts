@@ -7,9 +7,9 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Organization } from '../../organizations/entities/organization.entity.ts';
-import { Application } from '../../applications/entities/application.entity.ts';
-import { Provider } from './provider.entity.ts';
+import { Organization } from '../../../organizations/entities/organization.entity.ts';
+import { Application } from '../../../applications/entities/application.entity.ts';
+import { Provider } from '../../provider.entity.ts';
 
 export type ProviderEnvironment = 'test' | 'live';
 

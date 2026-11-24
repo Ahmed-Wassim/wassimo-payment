@@ -5,14 +5,14 @@ import { APP_CONFIG } from '../../../config/config.module.ts';
 import type { AppConfig } from '../../../config/configuration.ts';
 import { CurrenciesService } from '../../currencies/currencies.service.ts';
 import { PaymentAttempt } from '../../payments/entities/payment-attempt.entity.ts';
-import { ProviderAdapter } from '../adapter/adapter.ts';
-import { MockAdapter } from '../adapters/mock/mock.adapter.ts';
-import { PaytabsAdapter } from '../adapters/paytabs/paytabs.adapter.ts';
-import { PaymobAdapter } from '../adapters/paymob/paymob.adapter.ts';
-import { FawaterakAdapter } from '../adapters/fawaterak/fawaterak.adapter.ts';
-import { ProviderAccount } from '../entities/provider-account.entity.ts';
+import { ProviderAdapter } from './adapter.ts';
+import { MockAdapter } from './adapters/mock/mock.adapter.ts';
+import { PaytabsAdapter } from './adapters/paytabs/paytabs.adapter.ts';
+import { PaymobAdapter } from './adapters/paymob/paymob.adapter.ts';
+import { FawaterakAdapter } from './adapters/fawaterak/fawaterak.adapter.ts';
+import { ProviderAccount } from '../accounts/entity/provider-account.entity.ts';
 import { PROVIDER_CODE, isProviderCode } from '../provider-code.ts';
-import { ProviderCredentialService } from '../provider-credential.service.ts';
+import { ProviderCredentialService } from '../credentials/provider-credential.service.ts';
 
 @Injectable()
 export class PaymentProviderFactory {

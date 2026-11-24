@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Provider } from '../entities/provider.entity.ts';
-import { PROVIDER_CATALOGUES } from '../constants/providers-methods.constant.ts';
+import { Provider } from '../provider.entity.ts';
+import { PROVIDER_CATALOGUES } from './methods.constant.ts';
 
 @Injectable()
 export class ProviderMethodsSeeder {

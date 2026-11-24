@@ -1,8 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
-import { APP_CONFIG } from '../../../../config/config.module.ts';
-import type { AppConfig } from '../../../../config/configuration.ts';
-import type { CheckoutCustomer, ProviderResult } from '../../adapter/adapter.ts';
+import { APP_CONFIG } from '../../../../../config/config.module.ts';
+import type { AppConfig } from '../../../../../config/configuration.ts';
+import type { CheckoutCustomer, ProviderResult } from '../../adapter.ts';
 
 export type MockOutcome = Exclude<ProviderResult, 'unknown'>;
 export type MockButton = 'approve' | 'decline' | 'approve-lost';

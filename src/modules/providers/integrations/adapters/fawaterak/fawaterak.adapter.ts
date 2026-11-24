@@ -1,8 +1,8 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { Repository } from 'typeorm';
-import { CurrenciesService } from '../../../currencies/currencies.service.ts';
-import { PaymentAttempt } from '../../../payments/entities/payment-attempt.entity.ts';
-import { ProviderAccount } from '../../entities/provider-account.entity.ts';
+import { CurrenciesService } from '../../../../currencies/currencies.service.ts';
+import { PaymentAttempt } from '../../../../payments/entities/payment-attempt.entity.ts';
+import { ProviderAccount } from '../../../accounts/entity/provider-account.entity.ts';
 import {
   CheckoutInput,
   CheckoutResult,
@@ -13,9 +13,9 @@ import {
   ProviderResult,
   RefundInput,
   RefundResult,
-} from '../../adapter/adapter.ts';
-import { PROVIDER_CODE } from '../../provider-code.ts';
-import { ProviderCredentialService } from '../../provider-credential.service.ts';
+} from '../../adapter.ts';
+import { PROVIDER_CODE } from '../../../provider-code.ts';
+import { ProviderCredentialService } from '../../../credentials/provider-credential.service.ts';
 import { findAttemptForProvider } from '../../provider-attempt.lookup.ts';
 
 export class FawaterakAdapter implements ProviderAdapter {

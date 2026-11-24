@@ -1,6 +1,6 @@
 import { Repository } from 'typeorm';
-import { CurrenciesService } from '../../../currencies/currencies.service.ts';
-import { PaymentAttempt } from '../../../payments/entities/payment-attempt.entity.ts';
+import { CurrenciesService } from '../../../../currencies/currencies.service.ts';
+import { PaymentAttempt } from '../../../../payments/entities/payment-attempt.entity.ts';
 import {
   CheckoutInput,
   CheckoutResult,
@@ -11,10 +11,10 @@ import {
   ProviderTimeoutError,
   RefundInput,
   RefundResult,
-} from '../../adapter/adapter.ts';
-import { ProviderAccount } from '../../entities/provider-account.entity.ts';
-import { PROVIDER_CODE } from '../../provider-code.ts';
-import { ProviderCredentialService } from '../../provider-credential.service.ts';
+} from '../../adapter.ts';
+import { ProviderAccount } from '../../../accounts/entity/provider-account.entity.ts';
+import { PROVIDER_CODE } from '../../../provider-code.ts';
+import { ProviderCredentialService } from '../../../credentials/provider-credential.service.ts';
 import { findAttemptForProvider } from '../../provider-attempt.lookup.ts';
 
 export class PaytabsAdapter implements ProviderAdapter {

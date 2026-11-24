@@ -8,8 +8,8 @@ import {
   RefundInput,
   RefundResult,
   ProviderTimeoutError,
-} from '../../adapter/adapter.ts';
-import { PROVIDER_CODE } from '../../provider-code.ts';
+} from '../../adapter.ts';
+import { PROVIDER_CODE } from '../../../provider-code.ts';
 import { MockHostedService, MockWebhookPayload } from './mock-hosted.service.ts';
 import { createHmac, timingSafeEqual } from 'crypto';
 

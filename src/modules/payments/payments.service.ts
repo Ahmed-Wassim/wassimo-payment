@@ -4,7 +4,7 @@ import { EntityManager, Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
 import { CurrenciesService } from '../currencies/currencies.service.ts';
-import { ProvidersService } from '../providers/providers.service.ts';
+import { ProviderAccountsService } from '../providers/accounts/provider-accounts.service.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
 import { Payment } from './entities/payment.entity.ts';
 import { CustomersService } from '../customers/customers.service.ts';
@@ -14,7 +14,7 @@ export class PaymentsService {
   constructor(
     @InjectRepository(Payment) private readonly repo: Repository<Payment>,
     private readonly currencies: CurrenciesService,
-    private readonly providers: ProvidersService,
+    private readonly providers: ProviderAccountsService,
     private readonly customers: CustomersService,
   ) {}
 

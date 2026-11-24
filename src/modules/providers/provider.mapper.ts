@@ -1,4 +1,4 @@
-import { Provider, ProviderMethod } from '../entities/provider.entity.ts';
+import { Provider, ProviderMethod } from './provider.entity.ts';
 
 export class ProviderMethodModel {
   code!: string;

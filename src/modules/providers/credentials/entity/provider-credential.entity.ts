@@ -7,7 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { ProviderAccount } from './provider-account.entity.ts';
+import { ProviderAccount } from '../../accounts/entity/provider-account.entity.ts';
 
 @Entity('provider_credentials')
 export class ProviderCredential {

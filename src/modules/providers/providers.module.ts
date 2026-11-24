@@ -4,17 +4,18 @@ import { AuthModule } from '../auth/auth.module.ts';
 import { CurrenciesModule } from '../currencies/currencies.module.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
 import { UsersModule } from '../users/users.module.ts';
-import { MockAdapter } from './adapters/mock/mock.adapter.ts';
-import { MockHostedController } from './adapters/mock/mock-hosted.controller.ts';
-import { MockHostedService } from './adapters/mock/mock-hosted.service.ts';
-import { ProviderAccount } from './entities/provider-account.entity.ts';
-import { ProviderCredential } from './entities/provider-credential.entity.ts';
-import { Provider } from './entities/provider.entity.ts';
-import { PaymentProviderFactory } from './factories/payment-provider.factory.ts';
-import { ProviderMethodsSeeder } from './seeder/provider-methods.seeder.ts';
-import { ProviderCredentialService } from './provider-credential.service.ts';
+import { ProviderAccount } from './accounts/entity/provider-account.entity.ts';
+import { ProviderAccountsController } from './accounts/provider-accounts.controller.ts';
+import { ProviderAccountsService } from './accounts/provider-accounts.service.ts';
+import { ProviderCredential } from './credentials/entity/provider-credential.entity.ts';
+import { ProviderCredentialService } from './credentials/provider-credential.service.ts';
+import { MockAdapter } from './integrations/adapters/mock/mock.adapter.ts';
+import { MockHostedController } from './integrations/adapters/mock/mock-hosted.controller.ts';
+import { MockHostedService } from './integrations/adapters/mock/mock-hosted.service.ts';
+import { PaymentProviderFactory } from './integrations/payment-provider.factory.ts';
+import { Provider } from './provider.entity.ts';
+import { ProviderMethodsSeeder } from './methods/methods.seeder.ts';
 import { ProvidersController } from './providers.controller.ts';
-import { ProviderAccountsController } from './provider-accounts.controller.ts';
 import { ProvidersService } from './providers.service.ts';
 
 @Module({
@@ -36,12 +37,18 @@ import { ProvidersService } from './providers.service.ts';
   ],
   providers: [
     ProvidersService,
+    ProviderAccountsService,
     ProviderCredentialService,
     ProviderMethodsSeeder,
     MockHostedService,
     MockAdapter,
     PaymentProviderFactory,
   ],
-  exports: [ProvidersService, ProviderCredentialService, PaymentProviderFactory],
+  exports: [
+    ProvidersService,
+    ProviderAccountsService,
+    ProviderCredentialService,
+    PaymentProviderFactory,
+  ],
 })
 export class ProvidersModule {}

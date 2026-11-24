@@ -1,4 +1,4 @@
-import type { ProviderMethod } from '../entities/provider.entity.ts';
+import type { ProviderMethod } from '../provider.entity.ts';
 
 export const MOCK_METHODS = [
   { code: 'card', name: 'Card', is_special: false },

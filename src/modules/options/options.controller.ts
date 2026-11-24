@@ -3,11 +3,11 @@ import { ApiKeyGuard } from '../auth/api-key.guard.ts';
 import { ApiScope } from '../auth/api-scope.decorator.ts';
 import { AuthContext } from '../auth/auth-context.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
-import { ProvidersService } from '../providers/providers.service.ts';
+import { ProviderAccountsService } from '../providers/accounts/provider-accounts.service.ts';
 
 @Controller()
 export class OptionsController {
-  constructor(private readonly providers: ProvidersService) {}
+  constructor(private readonly providers: ProviderAccountsService) {}
 
   @Get('v1/options')
   @UseGuards(ApiKeyGuard)
