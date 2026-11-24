@@ -21,12 +21,22 @@ export class UsersService {
     private readonly roles: RolesService,
   ) {}
 
-  async findByEmail(email: string, selectPassword = false): Promise<User | null> {
+  async findByEmail(email: string): Promise<User | null> {
+    return this.users.findOne({ where: { email } });
+  }
+
+  async findByEmailWithPassword(email: string): Promise<User | null> {
     return this.users.findOne({
       where: { email },
-      select: selectPassword
-        ? { id: true, email: true, passwordHash: true, status: true, isSuperAdmin: true, createdAt: true, updatedAt: true }
-        : undefined,
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        status: true,
+        isSuperAdmin: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
@@ -37,6 +47,30 @@ export class UsersService {
     const row = await this.users.findOne({ where: { id } });
     if (!row) throw new NotFoundException(`User not found ${id}`);
     return row;
+  }
+
+  async findByIdWithPassword(id: string): Promise<User> {
+    if (!isUuid(id)) {
+      throw new BadRequestException('malformed user id');
+    }
+    const row = await this.users.findOne({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        status: true,
+        isSuperAdmin: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    if (!row) throw new NotFoundException(`User not found ${id}`);
+    return row;
+  }
+
+  async updatePassword(id: string, passwordHash: string): Promise<void> {
+    await this.users.update({ id }, { passwordHash });
   }
 
   async findMembership(userId: string): Promise<OrgMembership | null> {
