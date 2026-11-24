@@ -8,6 +8,18 @@ export class ProviderTimeoutError extends Error {
   }
 }
 
+export class ProviderOutcomeUnknownError extends Error {
+  providerRef?: string;
+
+  constructor(message = 'provider outcome is unknown', providerRef?: string) {
+    super(message);
+    this.name = 'ProviderOutcomeUnknownError';
+    this.providerRef = providerRef;
+  }
+}
+
+export const PROVIDER_REQUEST_TIMEOUT_MS = 8_000;
+
 export class ProviderConfigError extends Error {
   constructor(message = 'provider configuration error') {
     super(message);
@@ -30,9 +42,20 @@ export interface CheckoutResult {
   redirectUrl: string;
 }
 
-export type ProviderResult = 'succeeded' | 'failed' | 'pending' | 'unknown';
+export const PROVIDER_RESULT = {
+  SUCCEEDED: 'succeeded',
+  FAILED: 'failed',
+  PENDING: 'pending',
+  UNKNOWN: 'unknown',
+} as const;
 
-export type ProviderOutcomeResult = Exclude<ProviderResult, 'pending'>;
+export type ProviderResult =
+  (typeof PROVIDER_RESULT)[keyof typeof PROVIDER_RESULT];
+
+export type ProviderOutcomeResult = Exclude<
+  ProviderResult,
+  typeof PROVIDER_RESULT.PENDING
+>;
 
 export interface Outcome {
   result: ProviderOutcomeResult;
@@ -43,10 +66,12 @@ export interface RefundInput {
   providerReference: string;
   amountMinor: bigint;
   currency: string;
+  reason: string | null;
 }
 
 export interface RefundResult {
-  providerRef: string;
+  providerRef: string | null;
+  result: ProviderOutcomeResult;
 }
 
 export interface ProviderEvent {
@@ -64,6 +89,8 @@ export interface ProviderAdapter {
   readonly providerCode: ProviderCode;
   createCheckout(input: CheckoutInput): Promise<CheckoutResult>;
   queryStatus(providerReference: string): Promise<Outcome>;
+  queryStatusByPaymentId?(paymentId: string): Promise<Outcome>;
+  queryRefundStatus?(refundReference: string): Promise<Outcome>;
   refund(input: RefundInput): Promise<RefundResult>;
   verifyWebhook(
     headers: Record<string, string>,

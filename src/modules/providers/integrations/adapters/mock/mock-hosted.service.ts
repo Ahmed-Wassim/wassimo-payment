@@ -2,9 +2,16 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { APP_CONFIG } from '../../../../../config/config.module.ts';
 import type { AppConfig } from '../../../../../config/configuration.ts';
-import type { CheckoutCustomer, ProviderResult } from '../../adapter.ts';
+import {
+  PROVIDER_RESULT,
+  type CheckoutCustomer,
+  type ProviderResult,
+} from '../../adapter.ts';
 
-export type MockOutcome = Exclude<ProviderResult, 'unknown'>;
+export type MockOutcome = Exclude<
+  ProviderResult,
+  typeof PROVIDER_RESULT.UNKNOWN
+>;
 export type MockButton = 'approve' | 'decline' | 'approve-lost';
 
 export interface MockWebhookPayload {
@@ -55,7 +62,7 @@ export class MockHostedService {
       currency,
       method,
       customer,
-      outcome: 'pending',
+      outcome: PROVIDER_RESULT.PENDING,
       webhookDelivered: false,
     };
     this.sessions.set(sessionRef, session);
@@ -77,7 +84,7 @@ export class MockHostedService {
       currency,
       method: `refund_of_${paymentProviderRef}`,
       customer: null,
-      outcome: lost ? 'pending' : 'succeeded',
+      outcome: lost ? PROVIDER_RESULT.PENDING : PROVIDER_RESULT.SUCCEEDED,
       webhookDelivered: false,
     };
     this.sessions.set(sessionRef, session);
@@ -90,7 +97,9 @@ export class MockHostedService {
       throw new NotFoundException(`unknown hosted session ${sessionRef}`);
     }
 
-    session.outcome = button === 'decline' ? 'failed' : 'succeeded';
+    session.outcome = button === 'decline'
+      ? PROVIDER_RESULT.FAILED
+      : PROVIDER_RESULT.SUCCEEDED;
     session.webhookDelivered = button !== 'approve-lost';
     return session;
   }

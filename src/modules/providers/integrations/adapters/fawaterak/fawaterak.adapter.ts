@@ -10,7 +10,11 @@ import {
   ProviderAdapter,
   ProviderEvent,
   ProviderConfigError,
+  ProviderOutcomeUnknownError,
+  ProviderTimeoutError,
   ProviderResult,
+  PROVIDER_RESULT,
+  PROVIDER_REQUEST_TIMEOUT_MS,
   RefundInput,
   RefundResult,
 } from '../../adapter.ts';
@@ -52,12 +56,23 @@ export class FawaterakAdapter implements ProviderAdapter {
       pay_load: { payment_id: input.paymentId },
     };
 
-    const res = await fetch(`${baseUrl}/api/v3/createTransaction`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const data = (await res.json().catch(() => ({}))) as any;
+    let res: Response;
+    try {
+      res = await fetch(`${baseUrl}/api/v3/createTransaction`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      throw new ProviderTimeoutError('fawaterak createTransaction request');
+    }
+    let data: any;
+    try {
+      data = await res.json();
+    } catch {
+      throw new ProviderTimeoutError('fawaterak createTransaction response');
+    }
     if (!res.ok) throw new ProviderConfigError(`fawaterak createTransaction: ${res.status}`);
 
     const intentKey = data?.data?.intent_key;
@@ -83,12 +98,14 @@ export class FawaterakAdapter implements ProviderAdapter {
     const { config, credentials } = await this.context(providerReference);
     const tx = await this.getTransaction(providerReference, config, credentials);
     const paid = tx?.paid;
-    if (paid === 1 || paid === '1' || paid === true) return { result: 'succeeded' };
+    if (paid === 1 || paid === '1' || paid === true) {
+      return { result: PROVIDER_RESULT.SUCCEEDED };
+    }
     const status = String(tx?.status_text || '').toLowerCase();
     if (['failed', 'fail', 'expired', 'canceled', 'cancelled'].includes(status)) {
-      return { result: 'failed' };
+      return { result: PROVIDER_RESULT.FAILED };
     }
-    return { result: 'unknown' };
+    return { result: PROVIDER_RESULT.UNKNOWN };
   }
 
   async refund(input: RefundInput): Promise<RefundResult> {
@@ -98,35 +115,81 @@ export class FawaterakAdapter implements ProviderAdapter {
     const baseUrl = this.baseUrl(config);
     const token = await this.accessToken(baseUrl, creds);
 
+    if (!input.reason?.trim()) {
+      throw new ProviderConfigError('fawaterak refund requires a reason');
+    }
+
+    const transaction = await this.getTransaction(
+      input.providerReference,
+      config,
+      creds,
+      token,
+    );
+    const transactionId = Number(transaction?.transaction_id);
+    if (!Number.isSafeInteger(transactionId) || transactionId <= 0) {
+      throw new ProviderConfigError('fawaterak: missing transaction_id for refund');
+    }
+
     const currency = await this.currencies.requireEnabled(input.currency);
     const amount = Number(this.currencies.minorToDecimal(input.amountMinor, currency.exponent));
 
-    const res = await fetch(`${baseUrl}/api/v3/refundTransaction`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        intent_key: input.providerReference,
-        amount,
-        currency: input.currency.toUpperCase(),
-      }),
-    });
-    const data = (await res.json().catch(() => ({}))) as any;
+    let res: Response;
+    let data: any;
+    try {
+      res = await fetch(`${baseUrl}/api/v3/refund/create`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          refund_type: '3',
+          refund_id: transactionId,
+          reason: input.reason.trim(),
+          refundable_amount: amount,
+        }),
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+      data = await res.json();
+    } catch {
+      throw new ProviderTimeoutError('fawaterak refund request');
+    }
+    if (res.status >= 500) {
+      throw new ProviderOutcomeUnknownError(
+        `fawaterak refund returned HTTP ${res.status}`,
+      );
+    }
     if (!res.ok) {
       throw new ProviderConfigError(`fawaterak refund: ${res.status} ${data?.message || ''}`);
     }
-    const refundId = data?.data?.refund_id || data?.data?.id || data?.refund_id;
-    return { providerRef: String(refundId || input.providerReference) };
+    return {
+      providerRef: null,
+      result: PROVIDER_RESULT.UNKNOWN,
+    };
   }
 
-  private async getTransaction(intentKey: string, config: any, credentials: Record<string, string>) {
+  private async getTransaction(
+    intentKey: string,
+    config: any,
+    credentials: Record<string, string>,
+    accessToken?: string,
+  ) {
     const baseUrl = this.baseUrl(config);
-    const token = await this.accessToken(baseUrl, credentials);
-    const res = await fetch(`${baseUrl}/api/v3/getTransactionData`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ intent_key: intentKey }),
-    });
-    const data = (await res.json().catch(() => ({}))) as any;
+    const token = accessToken ?? (await this.accessToken(baseUrl, credentials));
+    let res: Response;
+    try {
+      res = await fetch(`${baseUrl}/api/v3/getTransactionData`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intent_key: intentKey }),
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      throw new ProviderTimeoutError('fawaterak transaction inquiry');
+    }
+    let data: any;
+    try {
+      data = await res.json();
+    } catch {
+      throw new ProviderTimeoutError('fawaterak refund response');
+    }
     return data?.data || data;
   }
 
@@ -181,7 +244,7 @@ export class FawaterakAdapter implements ProviderAdapter {
     const tx = await this.getTransaction(providerReference, account.config as any, creds as any).catch(() => null);
     if (!tx) return null;
     const result = this.outcomeFromTransaction(tx, status);
-    if (result === 'unknown') return null;
+    if (result === PROVIDER_RESULT.UNKNOWN) return null;
 
     return {
       providerEventId: transactionId != null ? String(transactionId) : null,
@@ -194,12 +257,18 @@ export class FawaterakAdapter implements ProviderAdapter {
 
   private outcomeFromTransaction(tx: any, fallbackStatus: string): ProviderResult {
     const paid = tx?.paid;
-    if (paid === 1 || paid === '1' || paid === true) return 'succeeded';
+    if (paid === 1 || paid === '1' || paid === true) {
+      return PROVIDER_RESULT.SUCCEEDED;
+    }
     const status = String(tx?.status_text || tx?.status || fallbackStatus || '').toLowerCase();
-    if (['paid', 'success', 'succeeded'].includes(status)) return 'succeeded';
-    if (['failed', 'fail', 'expired', 'canceled', 'cancelled'].includes(status)) return 'failed';
-    if (status === 'pending') return 'pending';
-    return 'unknown';
+    if (['paid', 'success', 'succeeded'].includes(status)) {
+      return PROVIDER_RESULT.SUCCEEDED;
+    }
+    if (['failed', 'fail', 'expired', 'canceled', 'cancelled'].includes(status)) {
+      return PROVIDER_RESULT.FAILED;
+    }
+    if (status === 'pending') return PROVIDER_RESULT.PENDING;
+    return PROVIDER_RESULT.UNKNOWN;
   }
 
   private parseBody(headers: Record<string, string>, rawBody: Buffer): any | null {
@@ -235,6 +304,7 @@ export class FawaterakAdapter implements ProviderAdapter {
         client_id: credentials.client_id,
         client_secret: credentials.client_secret,
       }),
+      signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
     });
     const data = (await res.json().catch(() => ({}))) as any;
     if (!res.ok || !data?.access_token) {

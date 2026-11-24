@@ -9,7 +9,10 @@ import {
   ProviderAdapter,
   ProviderEvent,
   ProviderConfigError,
+  ProviderTimeoutError,
   ProviderResult,
+  PROVIDER_RESULT,
+  PROVIDER_REQUEST_TIMEOUT_MS,
   RefundInput,
   RefundResult,
 } from '../../adapter.ts';
@@ -41,21 +44,32 @@ export class PaymobAdapter implements ProviderAdapter {
       return this.createClassicWalletCheckout(input, config, creds, amount, integrationId);
     }
 
-    const res = await fetch(`${String(config.base_url || 'https://accept.paymob.com').replace(/\/$/, '')}/v1/intention/`, {
-      method: 'POST',
-      headers: { Authorization: `Token ${creds.secret_key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        amount,
-        currency: input.currency.toUpperCase(),
-        payment_methods: [Number(integrationId)],
-        items: [{ name: `payment ${input.paymentId}`.slice(0, 50), amount, quantity: 1 }],
-        billing_data: this.billingData(input.customerDetails!),
-        special_reference: input.paymentId,
-        notification_url: config.notification_url,
-        redirection_url: config.redirection_url,
-      }),
-    });
-    const data = (await res.json()) as any;
+    let res: Response;
+    try {
+      res = await fetch(`${String(config.base_url || 'https://accept.paymob.com').replace(/\/$/, '')}/v1/intention/`, {
+        method: 'POST',
+        headers: { Authorization: `Token ${creds.secret_key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          currency: input.currency.toUpperCase(),
+          payment_methods: [Number(integrationId)],
+          items: [{ name: `payment ${input.paymentId}`.slice(0, 50), amount, quantity: 1 }],
+          billing_data: this.billingData(input.customerDetails!),
+          special_reference: input.paymentId,
+          notification_url: config.notification_url,
+          redirection_url: config.redirection_url,
+        }),
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      throw new ProviderTimeoutError('paymob intention request');
+    }
+    let data: any;
+    try {
+      data = await res.json();
+    } catch {
+      throw new ProviderTimeoutError('paymob intention response');
+    }
     if (!res.ok) throw new ProviderConfigError(`paymob intention: ${res.status}`);
 
     return {
@@ -75,19 +89,26 @@ export class PaymobAdapter implements ProviderAdapter {
     const authToken = await this.authToken(base, creds.api_key);
     const billing = this.billingData(input.customerDetails || {});
 
-    const orderRes = await fetch(`${base}/api/ecommerce/orders`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        auth_token: authToken,
-        delivery_needed: false,
-        amount_cents: String(amount),
-        currency: input.currency.toUpperCase(),
-        merchant_order_id: input.paymentId,
-        items: [],
-      }),
-    });
-    const order = (await orderRes.json().catch(() => ({}))) as any;
+    let orderRes: Response;
+    let order: any;
+    try {
+      orderRes = await fetch(`${base}/api/ecommerce/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          auth_token: authToken,
+          delivery_needed: false,
+          amount_cents: String(amount),
+          currency: input.currency.toUpperCase(),
+          merchant_order_id: input.paymentId,
+          items: [],
+        }),
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+      order = await orderRes.json();
+    } catch {
+      throw new ProviderTimeoutError('paymob wallet order request');
+    }
     if (!orderRes.ok || !order?.id) {
       throw new ProviderConfigError(`paymob wallet order: ${orderRes.status}`);
     }
@@ -100,21 +121,31 @@ export class PaymobAdapter implements ProviderAdapter {
       postal_code: String(input.customerDetails?.zip || 'NA'),
       ...billing,
     };
-    const pkRes = await fetch(`${base}/api/acceptance/payment_keys`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        auth_token: authToken,
-        amount_cents: String(amount),
-        expiration: 3600,
-        order_id: order.id,
-        billing_data: pkBilling,
-        currency: input.currency.toUpperCase(),
-        integration_id: integrationId,
-        lock_order_when_paid: false,
-      }),
-    });
-    const pk = (await pkRes.json().catch(() => ({}))) as any;
+    let pkRes: Response;
+    let pk: any;
+    try {
+      pkRes = await fetch(`${base}/api/acceptance/payment_keys`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          auth_token: authToken,
+          amount_cents: String(amount),
+          expiration: 3600,
+          order_id: order.id,
+          billing_data: pkBilling,
+          currency: input.currency.toUpperCase(),
+          integration_id: integrationId,
+          lock_order_when_paid: false,
+        }),
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+      pk = await pkRes.json();
+    } catch {
+      throw new ProviderTimeoutError(
+        'paymob wallet payment key request',
+        String(order.id),
+      );
+    }
     if (!pkRes.ok || !pk?.token) {
       throw new ProviderConfigError(`paymob wallet payment key: ${pkRes.status}`);
     }
@@ -124,15 +155,29 @@ export class PaymobAdapter implements ProviderAdapter {
       throw new ProviderConfigError('paymob wallet: customer phone number is required');
     }
 
-    const payRes = await fetch(`${base}/api/acceptance/payments/pay`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        source: { identifier, subtype: 'WALLET' },
-        payment_token: pk.token,
-      }),
-    });
-    const pay = (await payRes.json().catch(() => ({}))) as any;
+    let payRes: Response;
+    try {
+      payRes = await fetch(`${base}/api/acceptance/payments/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: { identifier, subtype: 'WALLET' },
+          payment_token: pk.token,
+        }),
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      throw new ProviderTimeoutError('paymob wallet payment request', String(order.id));
+    }
+    let pay: any;
+    try {
+      pay = await payRes.json();
+    } catch {
+      throw new ProviderTimeoutError(
+        'paymob wallet payment response',
+        String(order.id),
+      );
+    }
     if (!payRes.ok) {
       throw new ProviderConfigError(`paymob wallet pay: ${payRes.status}`);
     }
@@ -155,7 +200,57 @@ export class PaymobAdapter implements ProviderAdapter {
     const tx = await this.inquiry(base, token, providerReference);
 
     const result = this.txResult(tx);
-    return { result: result === 'pending' ? 'unknown' : result };
+    return {
+      result: result === PROVIDER_RESULT.PENDING
+        ? PROVIDER_RESULT.UNKNOWN
+        : result,
+    };
+  }
+
+  async queryStatusByPaymentId(paymentId: string): Promise<Outcome> {
+    if (!this.bound) throw new ProviderConfigError('paymob: not bound');
+    const config = (this.bound.account.config ?? {}) as any;
+    const base = String(config.base_url || 'https://accept.paymob.com').replace(/\/$/, '');
+    const token = await this.authToken(base, this.bound.credentials.api_key);
+    const tx = await this.inquiryByMerchantOrderId(base, token, paymentId);
+
+    const result = this.txResult(tx);
+    return {
+      result: result === PROVIDER_RESULT.PENDING
+        ? PROVIDER_RESULT.UNKNOWN
+        : result,
+    };
+  }
+
+  async queryRefundStatus(refundReference: string): Promise<Outcome> {
+    if (!this.bound) throw new ProviderConfigError('paymob: not bound');
+    const config = (this.bound.account.config ?? {}) as any;
+    const base = String(config.base_url || 'https://accept.paymob.com').replace(/\/$/, '');
+    const token = await this.authToken(base, this.bound.credentials.api_key);
+    let res: Response;
+    try {
+      res = await fetch(
+        `${base}/api/acceptance/transactions/${encodeURIComponent(refundReference)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+        },
+      );
+    } catch {
+      throw new ProviderTimeoutError('paymob refund inquiry');
+    }
+    const tx = (await res.json().catch(() => ({}))) as any;
+    if (!res.ok) throw new ProviderConfigError(`paymob refund inquiry: ${res.status}`);
+    if (!tx?.is_refund && !tx?.is_internal_refund) {
+      return { result: PROVIDER_RESULT.UNKNOWN };
+    }
+
+    const result = this.txResult(tx);
+    return {
+      result: result === PROVIDER_RESULT.PENDING
+        ? PROVIDER_RESULT.UNKNOWN
+        : result,
+    };
   }
 
   async refund(input: RefundInput): Promise<RefundResult> {
@@ -172,27 +267,40 @@ export class PaymobAdapter implements ProviderAdapter {
     }
 
     const amountCents = Number(input.amountMinor);
-    const res = await fetch(`${base}/api/acceptance/void_refund/refund`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        auth_token: token,
-        transaction_id: Number(transactionId),
-        amount_cents: amountCents,
-      }),
-    });
-    const data = (await res.json().catch(() => ({}))) as any;
+    let res: Response;
+    let data: any;
+    try {
+      res = await fetch(`${base}/api/acceptance/void_refund/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          auth_token: token,
+          transaction_id: Number(transactionId),
+          amount_cents: amountCents,
+        }),
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+      data = await res.json();
+    } catch {
+      throw new ProviderTimeoutError('paymob refund request');
+    }
     if (!res.ok) {
       throw new ProviderConfigError(`paymob refund: ${res.status} ${data?.message || ''}`);
     }
-    return { providerRef: String(data?.id || transactionId) };
+    const result = this.txResult(data);
+    return {
+      providerRef: data?.id != null ? String(data.id) : null,
+      result: result === PROVIDER_RESULT.PENDING
+        ? PROVIDER_RESULT.UNKNOWN
+        : result,
+    };
   }
 
   private txResult(tx: any): ProviderResult {
-    if (tx.success && !tx.pending) return 'succeeded';
-    if (!tx.success && !tx.pending) return 'failed';
-    if (tx.pending) return 'pending';
-    return 'unknown';
+    if (tx.success && !tx.pending) return PROVIDER_RESULT.SUCCEEDED;
+    if (!tx.success && !tx.pending) return PROVIDER_RESULT.FAILED;
+    if (tx.pending) return PROVIDER_RESULT.PENDING;
+    return PROVIDER_RESULT.UNKNOWN;
   }
 
   private hmacData(tx: any): string {
@@ -243,6 +351,7 @@ export class PaymobAdapter implements ProviderAdapter {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ api_key: apiKey }),
+      signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
     });
     const data = (await res.json()) as any;
     if (!res.ok || !data?.token) {
@@ -252,11 +361,32 @@ export class PaymobAdapter implements ProviderAdapter {
   }
 
   private async inquiry(base: string, token: string, orderId: string): Promise<any> {
-    const res = await fetch(`${base}/api/ecommerce/orders/transaction_inquiry`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ auth_token: token, order_id: orderId }),
+    return this.postInquiry(base, { auth_token: token, order_id: orderId });
+  }
+
+  private async inquiryByMerchantOrderId(
+    base: string,
+    token: string,
+    merchantOrderId: string,
+  ): Promise<any> {
+    return this.postInquiry(base, {
+      auth_token: token,
+      merchant_order_id: merchantOrderId,
     });
+  }
+
+  private async postInquiry(base: string, body: Record<string, string>): Promise<any> {
+    let res: Response;
+    try {
+      res = await fetch(`${base}/api/ecommerce/orders/transaction_inquiry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      throw new ProviderTimeoutError('paymob transaction inquiry');
+    }
     return res.json() as any;
   }
 
@@ -296,7 +426,7 @@ export class PaymobAdapter implements ProviderAdapter {
 
     const orderStillOpen = this.orderStillOpen(tx);
     let result = this.txResult(tx);
-    if (result === 'failed' && orderStillOpen) return null;
+    if (result === PROVIDER_RESULT.FAILED && orderStillOpen) return null;
 
     // Trust anchor: re-query the order to confirm the latest transaction state
     try {
@@ -306,7 +436,10 @@ export class PaymobAdapter implements ProviderAdapter {
       const inquired = await this.inquiry(base, authToken, providerReference);
       if (inquired) {
         const inquiredResult = this.txResult(inquired);
-        if (inquiredResult !== 'unknown' && !(inquiredResult === 'failed' && orderStillOpen)) {
+        if (
+          inquiredResult !== PROVIDER_RESULT.UNKNOWN &&
+          !(inquiredResult === PROVIDER_RESULT.FAILED && orderStillOpen)
+        ) {
           result = inquiredResult;
         }
       }

@@ -5,6 +5,7 @@ import {
   Outcome,
   ProviderAdapter,
   ProviderEvent,
+  PROVIDER_RESULT,
   RefundInput,
   RefundResult,
   ProviderTimeoutError,
@@ -35,10 +36,14 @@ export class MockAdapter implements ProviderAdapter {
 
   async queryStatus(providerReference: string): Promise<Outcome> {
     const session = this.hosted.get(providerReference);
-    if (!session || session.outcome === 'pending') {
-      return { result: 'unknown' };
+    if (!session || session.outcome === PROVIDER_RESULT.PENDING) {
+      return { result: PROVIDER_RESULT.UNKNOWN };
     }
     return { result: session.outcome };
+  }
+
+  async queryRefundStatus(refundReference: string): Promise<Outcome> {
+    return this.queryStatus(refundReference);
   }
 
   async refund(input: RefundInput): Promise<RefundResult> {
@@ -54,7 +59,10 @@ export class MockAdapter implements ProviderAdapter {
         session.sessionRef,
       );
     }
-    return { providerRef: session.sessionRef };
+    return {
+      providerRef: session.sessionRef,
+      result: PROVIDER_RESULT.SUCCEEDED,
+    };
   }
 
   async verifyWebhook(
@@ -87,12 +95,12 @@ export class MockAdapter implements ProviderAdapter {
     }
 
     const result =
-      body.result === 'succeeded' ||
-      body.result === 'failed' ||
-      body.result === 'pending' ||
-      body.result === 'unknown'
+      body.result === PROVIDER_RESULT.SUCCEEDED ||
+      body.result === PROVIDER_RESULT.FAILED ||
+      body.result === PROVIDER_RESULT.PENDING ||
+      body.result === PROVIDER_RESULT.UNKNOWN
         ? body.result
-        : 'unknown';
+        : PROVIDER_RESULT.UNKNOWN;
 
     return {
       providerEventId: body.event_id ?? null,

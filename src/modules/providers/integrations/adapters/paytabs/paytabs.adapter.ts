@@ -8,7 +8,9 @@ import {
   ProviderAdapter,
   ProviderConfigError,
   ProviderEvent,
+  PROVIDER_RESULT,
   ProviderTimeoutError,
+  PROVIDER_REQUEST_TIMEOUT_MS,
   RefundInput,
   RefundResult,
 } from '../../adapter.ts';
@@ -60,6 +62,35 @@ export class PaytabsAdapter implements ProviderAdapter {
     return this.queryWith(this.bound.account.config as any, this.bound.credentials, providerReference);
   }
 
+  async queryStatusByPaymentId(paymentId: string): Promise<Outcome> {
+    if (!this.bound) throw new ProviderConfigError('paytabs: not bound');
+    const config = this.bound.account.config as any;
+    const baseUrl = String(config?.base_url || 'https://secure-egypt.paytabs.com').replace(/\/$/, '');
+    const transactions = await this.post(baseUrl, '/payment/query', this.bound.credentials.server_key, {
+      profile_id: config.profile_id,
+      cart_id: paymentId,
+    });
+
+    if (!Array.isArray(transactions) || transactions.length !== 1) {
+      return { result: PROVIDER_RESULT.UNKNOWN };
+    }
+    return this.outcomeFromQuery(transactions[0]);
+  }
+
+  async queryRefundStatus(refundReference: string): Promise<Outcome> {
+    if (!this.bound) throw new ProviderConfigError('paytabs: not bound');
+    const config = this.bound.account.config as any;
+    const baseUrl = String(config?.base_url || 'https://secure-egypt.paytabs.com').replace(/\/$/, '');
+    const data = await this.post(baseUrl, '/payment/query', this.bound.credentials.server_key, {
+      profile_id: config.profile_id,
+      tran_ref: refundReference,
+    });
+    if (String(data?.tran_type || '').toLowerCase() !== 'refund') {
+      return { result: PROVIDER_RESULT.UNKNOWN };
+    }
+    return this.outcomeFromQuery(data);
+  }
+
   async refund(input: RefundInput): Promise<RefundResult> {
     if (!this.bound) throw new ProviderConfigError('paytabs: not bound');
     const config = (this.bound.account.config ?? {}) as any;
@@ -77,10 +108,11 @@ export class PaytabsAdapter implements ProviderAdapter {
       tran_ref: input.providerReference,
     });
     const refundRef = data.tran_ref || data.refund_ref;
-    if (!refundRef) {
-      throw new ProviderConfigError('paytabs refund: missing tran_ref');
-    }
-    return { providerRef: String(refundRef) };
+    const outcome = this.outcomeFromQuery(data);
+    return {
+      providerRef: refundRef ? String(refundRef) : null,
+      result: outcome.result,
+    };
   }
 
   async verifyWebhook(
@@ -104,8 +136,8 @@ export class PaytabsAdapter implements ProviderAdapter {
     const credentials = await this.credentialsService.load(account.id).catch(() => null);
     if (!credentials) return null;
 
-    const outcome = await this.queryWith(account.config as any, credentials, String(tranRef)).catch(() => ({ result: 'unknown' as const }));
-    if (outcome.result === 'unknown') return null;
+    const outcome = await this.queryWith(account.config as any, credentials, String(tranRef)).catch(() => ({ result: PROVIDER_RESULT.UNKNOWN }));
+    if (outcome.result === PROVIDER_RESULT.UNKNOWN) return null;
 
     return {
       providerEventId: null,
@@ -127,9 +159,11 @@ export class PaytabsAdapter implements ProviderAdapter {
 
   private outcomeFromQuery(data: any): Outcome {
     const status = data.payment_result?.response_status || data.response_status;
-    if (status === 'A') return { result: 'succeeded' };
-    if (status === 'D' || status === 'C') return { result: 'failed' };
-    return { result: 'unknown' };
+    if (status === 'A') return { result: PROVIDER_RESULT.SUCCEEDED };
+    if (status === 'D' || status === 'C') {
+      return { result: PROVIDER_RESULT.FAILED };
+    }
+    return { result: PROVIDER_RESULT.UNKNOWN };
   }
 
   private customerDetails(c: any) {
@@ -163,12 +197,17 @@ export class PaytabsAdapter implements ProviderAdapter {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: serverKey },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
       });
     } catch (e) {
       throw new ProviderTimeoutError(`paytabs ${path}`);
     }
-    const payload = await response.json().catch(() => ({}));
+    let payload: any;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new ProviderTimeoutError(`paytabs ${path} response`);
+    }
     if (!response.ok) throw new ProviderConfigError(`paytabs ${path}: ${response.status}`);
     return payload;
   }

@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import type { RefundStatus } from '../refund-states.ts';
+import { REFUND_STATUS } from '../refund-states.ts';
 
 @Entity('refunds')
 @Index('refunds_payment', ['paymentId'])
@@ -26,7 +27,7 @@ export class Refund {
   @Column({ type: 'char', length: 3 })
   currency!: string;
 
-  @Column({ type: 'text', default: 'requested' })
+  @Column({ type: 'text', default: REFUND_STATUS.REQUESTED })
   status!: RefundStatus;
 
   @Column({ name: 'provider_ref', type: 'text', nullable: true })
