@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service.ts';
-import { RolesService } from '../users/roles.service.ts';
 
 export interface ActorContext {
   userId: string;
@@ -21,7 +20,6 @@ export class JwtGuard implements CanActivate {
   constructor(
     private readonly jwt: JwtService,
     private readonly users: UsersService,
-    private readonly roles: RolesService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -47,14 +45,11 @@ export class JwtGuard implements CanActivate {
     const membership = user.isSuperAdmin
       ? null
       : await this.users.requireMembership(user.id);
-    const platformRole = user.isSuperAdmin
-      ? await this.roles.findPlatformAdminRole()
-      : null;
     req.actor = {
       userId: user.id,
       email: user.email,
       organizationId: membership?.organizationId ?? null,
-      roleId: membership?.roleId ?? platformRole?.id ?? null,
+      roleId: membership?.roleId ?? null,
       isSuperAdmin: user.isSuperAdmin,
     };
     return true;
