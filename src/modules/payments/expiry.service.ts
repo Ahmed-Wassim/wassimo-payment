@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 import { APP_CONFIG } from '../../config/config.module.ts';
 import type { AppConfig } from '../../config/configuration.ts';
 import { OutboxService } from '../../outbox/outbox.service.ts';
+import { PAYMENT_STATUS } from './states.ts';
 
 @Injectable()
 export class ExpiryService implements OnModuleInit, OnModuleDestroy {
@@ -33,14 +34,14 @@ export class ExpiryService implements OnModuleInit, OnModuleDestroy {
       const expired = await this.dataSource.transaction(async (tx) => {
         const result = (await tx.query(
           `UPDATE payments
-              SET status = 'expired', updated_at = NOW()
-            WHERE status = 'created'
-              AND created_at < NOW() - ($1::int * interval '1 second')
+              SET status = $1, updated_at = NOW()
+            WHERE status = $2
+              AND created_at < NOW() - ($3::int * interval '1 second')
               AND NOT EXISTS (
                    SELECT 1 FROM payment_attempts a
                     WHERE a.payment_id = payments.id)
             RETURNING id, reference`,
-          [this.ttlSeconds],
+          [PAYMENT_STATUS.EXPIRED, PAYMENT_STATUS.CREATED, this.ttlSeconds],
         )) as unknown;
         const rows = (
           Array.isArray(result) && Array.isArray(result[0]) ? result[0] : result

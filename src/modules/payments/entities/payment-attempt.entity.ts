@@ -8,7 +8,12 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import type { AttemptStatus } from '../attempt-states.ts';
+import {
+  ATTEMPT_STATUS,
+  PAYMENT_ATTEMPT_OPERATION,
+  type AttemptStatus,
+  type PaymentAttemptOperation,
+} from '../attempt-states.ts';
 import { Organization } from '../../organizations/entities/organization.entity.ts';
 import { ProviderAccount } from '../../providers/accounts/entity/provider-account.entity.ts';
 import { Payment } from './payment.entity.ts';
@@ -43,10 +48,10 @@ export class PaymentAttempt {
   })
   providerAccount!: ProviderAccount;
 
-  @Column({ type: 'text', default: 'charge' })
-  operation!: string;
+  @Column({ type: 'text', default: PAYMENT_ATTEMPT_OPERATION.CHARGE })
+  operation!: PaymentAttemptOperation;
 
-  @Column({ type: 'text', default: 'initiated' })
+  @Column({ type: 'text', default: ATTEMPT_STATUS.INITIATED })
   status!: AttemptStatus;
 
   @Column({ name: 'provider_reference', type: 'text', nullable: true })

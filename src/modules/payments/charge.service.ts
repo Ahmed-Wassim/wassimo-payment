@@ -9,10 +9,17 @@ import {
 } from '../providers/integrations/adapter.ts';
 import { PaymentProviderFactory } from '../providers/integrations/payment-provider.factory.ts';
 import { ProviderAccountsService } from '../providers/accounts/provider-accounts.service.ts';
-import { attemptTransition, ChargeOutcome } from './attempt-states.ts';
+import { PROVIDER_ACCOUNT_STATUS } from '../providers/accounts/entity/provider-account.entity.ts';
+import {
+  ATTEMPT_STATUS,
+  attemptTransition,
+  CHARGE_OUTCOME,
+  ChargeOutcome,
+  PAYMENT_ATTEMPT_OPERATION,
+} from './attempt-states.ts';
 import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { Payment } from './entities/payment.entity.ts';
-import { transition } from './states.ts';
+import { PAYMENT_STATUS, transition } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
 import { CustomersService } from '../customers/customers.service.ts';
@@ -50,7 +57,7 @@ export class ChargeService {
       );
     }
 
-    if (payment.status !== 'created') {
+    if (payment.status !== PAYMENT_STATUS.CREATED) {
       throw new ApiError(
         'payment_not_chargeable',
         HttpStatus.CONFLICT,
@@ -79,11 +86,35 @@ export class ChargeService {
       }
       throw e;
     }
-    if (account.organization.id !== payment.organizationId) {
+    if (
+      account.organization.id !== payment.organizationId ||
+      account.application.id !== payment.applicationId
+    ) {
       throw new ApiError(
         'provider_account_not_found',
         HttpStatus.NOT_FOUND,
         'unknown provider account for this organization',
+      );
+    }
+    const ineligible: string[] = [];
+    if (account.status !== PROVIDER_ACCOUNT_STATUS.ENABLED) {
+      ineligible.push('account_disabled');
+    }
+    if (account.environment !== auth.environment) {
+      ineligible.push('environment_mismatch');
+    }
+    if (!account.supportedCurrencies.includes(payment.currency.toUpperCase())) {
+      ineligible.push('currency_unsupported');
+    }
+    if (!account.supportedMethods.includes(payment.method)) {
+      ineligible.push('method_unsupported');
+    }
+    if (ineligible.length > 0) {
+      throw new ApiError(
+        'provider_account_not_eligible',
+        HttpStatus.CONFLICT,
+        'the selected provider account cannot process this payment',
+        { reasons: ineligible },
       );
     }
 
@@ -106,7 +137,7 @@ export class ChargeService {
           'payment not found',
         );
       }
-      if (currentPayment.status !== 'created') {
+      if (currentPayment.status !== PAYMENT_STATUS.CREATED) {
         throw new ApiError(
           'payment_not_chargeable',
           HttpStatus.CONFLICT,
@@ -117,7 +148,7 @@ export class ChargeService {
       const activeAttempt = await tx.findOne(PaymentAttempt, {
         where: {
           payment: { id: payment.id },
-          status: 'initiated',
+          status: ATTEMPT_STATUS.INITIATED,
         },
       });
       if (activeAttempt) {
@@ -132,15 +163,15 @@ export class ChargeService {
         payment: { id: payment.id },
         organization: { id: payment.organizationId },
         providerAccount: { id: payment.providerAccountId! },
-        operation: 'charge',
-        status: 'initiated',
+        operation: PAYMENT_ATTEMPT_OPERATION.CHARGE,
+        status: ATTEMPT_STATUS.INITIATED,
         diagnostics: {},
       });
     });
 
     let providerReference: string | null = null;
     let redirectUrl: string | null = null;
-    let outcome: ChargeOutcome = 'none';
+    let outcome: ChargeOutcome = CHARGE_OUTCOME.NONE;
     let diagnostics: Record<string, unknown> = {};
 
     try {
@@ -155,13 +186,14 @@ export class ChargeService {
       redirectUrl = result.redirectUrl;
     } catch (e) {
       if (e instanceof ProviderTimeoutError) {
-        outcome = 'unknown';
+        outcome = CHARGE_OUTCOME.UNKNOWN;
+        providerReference = e.providerRef ?? null;
         diagnostics = { phase: 'createCheckout', error: 'timeout' };
       } else if (e instanceof ProviderConfigError) {
-        outcome = 'failed';
+        outcome = CHARGE_OUTCOME.FAILED;
         diagnostics = { phase: 'createCheckout', error: 'provider_config', message: e.message };
       } else {
-        outcome = 'failed';
+        outcome = CHARGE_OUTCOME.FAILED;
         diagnostics = { phase: 'createCheckout', error: 'provider_error', message: e instanceof Error ? e.message : String(e) };
       }
     }
@@ -169,22 +201,22 @@ export class ChargeService {
     await this.attempts.manager.transaction(async (tx) => {
       const row = await tx.findOneByOrFail(PaymentAttempt, { id: attempt.id });
 
-      if (outcome === 'failed') {
-        attemptTransition(row.status, 'failed');
+      if (outcome === CHARGE_OUTCOME.FAILED) {
+        attemptTransition(row.status, ATTEMPT_STATUS.FAILED);
       } else {
-        if (outcome === 'unknown') {
-          attemptTransition(row.status, 'unknown');
+        if (outcome === CHARGE_OUTCOME.UNKNOWN) {
+          attemptTransition(row.status, ATTEMPT_STATUS.UNKNOWN);
         }
 
         const currentPayment = await tx.findOneByOrFail(Payment, {
           id: payment.id,
         });
-        if (currentPayment.status !== 'processing') {
-          transition(currentPayment.status, 'processing');
+        if (currentPayment.status !== PAYMENT_STATUS.PROCESSING) {
+          transition(currentPayment.status, PAYMENT_STATUS.PROCESSING);
           await tx.update(
             Payment,
             { id: payment.id },
-            { status: 'processing' },
+            { status: PAYMENT_STATUS.PROCESSING },
           );
         }
       }
@@ -193,7 +225,7 @@ export class ChargeService {
         PaymentAttempt,
         { id: attempt.id },
         {
-          status: outcome === 'none' ? row.status : outcome,
+          status: outcome === CHARGE_OUTCOME.NONE ? row.status : outcome,
           providerReference,
           diagnostics: diagnostics as object,
         },

@@ -6,13 +6,18 @@ import {
   HttpStatus,
   Param,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiKeyGuard } from '../auth/api-key.guard.ts';
 import { ApiScope } from '../auth/api-scope.decorator.ts';
 import { AuthContext } from '../auth/auth-context.ts';
+import { ActorContext, JwtGuard } from '../auth/jwt.guard.ts';
+import { PermissionGuard } from '../auth/permission.guard.ts';
+import { Permission } from '../auth/permission.decorator.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
+import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { IdempotencyService } from '../idempotency/idempotency.service.ts';
 import { ChargeService } from './charge.service.ts';
 import { ResolutionService } from './resolution.service.ts';
@@ -22,7 +27,6 @@ import { CreatePaymentDto } from './dto/create-payment.dto.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
 
 @Controller()
-@UseGuards(ApiKeyGuard)
 export class PaymentsController {
   constructor(
     private readonly payments: PaymentsService,
@@ -32,6 +36,7 @@ export class PaymentsController {
   ) {}
 
   @Post('v1/payments')
+  @UseGuards(ApiKeyGuard)
   @ApiScope('payments:create')
   async create(
     @Req() req: { auth?: AuthContext },
@@ -63,6 +68,7 @@ export class PaymentsController {
   }
 
   @Get('v1/payments/:id')
+  @UseGuards(ApiKeyGuard)
   @ApiScope('payments:read')
   async get(@Req() req: { auth?: AuthContext }, @Param('id') id: string) {
     if (!isUuid(id)) {
@@ -82,6 +88,7 @@ export class PaymentsController {
   }
 
   @Post('v1/payments/:id/charge')
+  @UseGuards(ApiKeyGuard)
   @ApiScope('payments:charge')
   async chargePayment(
     @Req() req: { auth?: AuthContext },
@@ -91,6 +98,7 @@ export class PaymentsController {
   }
 
   @Post('v1/payments/:id/resolve')
+  @UseGuards(ApiKeyGuard)
   @ApiScope('payments:resolve')
   async resolvePayment(
     @Req() req: { auth?: AuthContext },
@@ -98,5 +106,22 @@ export class PaymentsController {
   ) {
     const payment = await this.resolution.resolve(req.auth!, id);
     return toPaymentModel(payment, await this.payments.customerFor(id));
+  }
+
+  @Get('payments')
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('payments:read')
+  listPayments(
+    @Req() req: { actor: ActorContext },
+    @Query() filter: FilterDto,
+  ) {
+    return this.payments.listForActor(req.actor, filter);
+  }
+
+  @Get('payments/:id')
+  @UseGuards(JwtGuard, PermissionGuard)
+  @Permission('payments:read')
+  getPayment(@Req() req: { actor: ActorContext }, @Param('id') id: string) {
+    return this.payments.requireByIdForActor(req.actor, id);
   }
 }

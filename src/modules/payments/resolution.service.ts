@@ -3,13 +3,25 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
-import { ProviderOutcomeResult } from '../providers/integrations/adapter.ts';
+import {
+  ProviderOutcomeResult,
+  PROVIDER_RESULT,
+} from '../providers/integrations/adapter.ts';
 import { PaymentProviderFactory } from '../providers/integrations/payment-provider.factory.ts';
 import { ProviderAccountsService } from '../providers/accounts/provider-accounts.service.ts';
-import { attemptRecoveryTransition, AttemptStatus } from './attempt-states.ts';
+import {
+  ATTEMPT_STATUS,
+  attemptRecoveryTransition,
+  AttemptStatus,
+} from './attempt-states.ts';
 import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { Payment } from './entities/payment.entity.ts';
-import { PaymentStatus, recoveryTransition, transition } from './states.ts';
+import {
+  PAYMENT_STATUS,
+  PaymentStatus,
+  recoveryTransition,
+  transition,
+} from './states.ts';
 import { PaymentsService } from './payments.service.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
 import { OutboxService } from '../../outbox/outbox.service.ts';
@@ -43,7 +55,10 @@ export class ResolutionService {
       );
     }
 
-    if (payment.status === 'succeeded' || payment.status === 'expired') {
+    if (
+      payment.status === PAYMENT_STATUS.SUCCEEDED ||
+      payment.status === PAYMENT_STATUS.EXPIRED
+    ) {
       throw new ApiError(
         'nothing_to_resolve',
         HttpStatus.CONFLICT,
@@ -51,10 +66,10 @@ export class ResolutionService {
       );
     }
 
-    const recoverable = payment.status === 'failed';
+    const recoverable = payment.status === PAYMENT_STATUS.FAILED;
     const selectableStatuses: AttemptStatus[] = recoverable
-      ? ['failed']
-      : ['unknown', 'initiated'];
+      ? [ATTEMPT_STATUS.FAILED]
+      : [ATTEMPT_STATUS.UNKNOWN, ATTEMPT_STATUS.INITIATED];
     const attempt = await this.attempts
       .createQueryBuilder('a')
       .leftJoinAndSelect('a.providerAccount', 'providerAccount')
@@ -62,7 +77,8 @@ export class ResolutionService {
       .andWhere('a.status IN (:...statuses)', {
         statuses: selectableStatuses,
       })
-      .orderBy("CASE WHEN a.status = 'unknown' THEN 0 ELSE 1 END")
+      .orderBy('CASE WHEN a.status = :unknown THEN 0 ELSE 1 END')
+      .setParameter('unknown', ATTEMPT_STATUS.UNKNOWN)
       .addOrderBy('a.createdAt', 'ASC')
       .getOne();
 
@@ -97,19 +113,27 @@ export class ResolutionService {
 
     const adapter = await this.factory.forAccount(account);
 
-    let outcome: ProviderOutcomeResult = 'unknown';
-    if (attempt.providerReference) {
-      try {
+    let outcome: ProviderOutcomeResult = PROVIDER_RESULT.UNKNOWN;
+    try {
+      if (attempt.providerReference) {
         outcome = (await adapter.queryStatus(attempt.providerReference)).result;
-      } catch {
-        outcome = 'unknown';
+      } else if (adapter.queryStatusByPaymentId) {
+        outcome = (await adapter.queryStatusByPaymentId(payment.id)).result;
       }
+    } catch {
+      outcome = PROVIDER_RESULT.UNKNOWN;
     }
 
-    if (outcome !== 'succeeded' && outcome !== 'failed') {
+    if (
+      outcome !== PROVIDER_RESULT.SUCCEEDED &&
+      outcome !== PROVIDER_RESULT.FAILED
+    ) {
       return payment;
     }
-    if (outcome === 'failed' && payment.status === 'failed') {
+    if (
+      outcome === PROVIDER_RESULT.FAILED &&
+      payment.status === PAYMENT_STATUS.FAILED
+    ) {
       return payment;
     }
 
@@ -126,15 +150,19 @@ export class ResolutionService {
 
       const fresh = await tx.findOneByOrFail(Payment, { id: payment.id });
 
-      if (fresh.status === 'created') {
-        transition(fresh.status, 'processing');
-        await tx.update(Payment, { id: payment.id }, { status: 'processing' });
+      if (fresh.status === PAYMENT_STATUS.CREATED) {
+        transition(fresh.status, PAYMENT_STATUS.PROCESSING);
+        await tx.update(Payment, { id: payment.id }, {
+          status: PAYMENT_STATUS.PROCESSING,
+        });
       }
 
       const current: PaymentStatus =
-        fresh.status === 'created' ? 'processing' : fresh.status;
+        fresh.status === PAYMENT_STATUS.CREATED
+          ? PAYMENT_STATUS.PROCESSING
+          : fresh.status;
       recoveryTransition(current, outcome);
-      if (outcome === 'succeeded') {
+      if (outcome === PROVIDER_RESULT.SUCCEEDED) {
         await tx.update(
           Payment,
           { id: payment.id },
@@ -148,10 +176,16 @@ export class ResolutionService {
       }
 
       const updated = await tx.findOneByOrFail(Payment, { id: payment.id });
-      if (outcome === 'succeeded' && fresh.status !== 'succeeded') {
+      if (
+        outcome === PROVIDER_RESULT.SUCCEEDED &&
+        fresh.status !== PAYMENT_STATUS.SUCCEEDED
+      ) {
         await this.outbox.writeSucceeded(tx, updated);
       }
-      if (outcome === 'failed' && current !== 'failed') {
+      if (
+        outcome === PROVIDER_RESULT.FAILED &&
+        current !== PAYMENT_STATUS.FAILED
+      ) {
         await this.outbox.writeFailed(tx, updated);
       }
 

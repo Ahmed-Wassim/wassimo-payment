@@ -1,13 +1,24 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
+import { isUuid } from '../../common/utils/is-uuid.ts';
+import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { CurrenciesService } from '../currencies/currencies.service.ts';
 import { ProviderAccountsService } from '../providers/accounts/provider-accounts.service.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
 import { Payment } from './entities/payment.entity.ts';
 import { CustomersService } from '../customers/customers.service.ts';
+import { PAYMENT_STATUS } from './states.ts';
+import { toPaymentModel, type PaymentModel } from './mappers/payment.mapper.ts';
+
+type Actor = { organizationId: string | null; isSuperAdmin: boolean };
 
 @Injectable()
 export class PaymentsService {
@@ -23,8 +34,8 @@ export class PaymentsService {
     auth: AuthContext,
     dto: CreatePaymentDto,
   ): Promise<Payment> {
-    if (!Number.isInteger(dto.amount_minor) || dto.amount_minor <= 0) {
-      throw new ApiError('invalid_amount', HttpStatus.BAD_REQUEST, 'amount_minor must be a positive integer');
+    if (!Number.isSafeInteger(dto.amount_minor) || dto.amount_minor <= 0) {
+      throw new ApiError('invalid_amount', HttpStatus.BAD_REQUEST, 'amount_minor must be a positive safe integer');
     }
     try {
       await this.currencies.requireEnabled(dto.currency);
@@ -56,7 +67,7 @@ export class PaymentsService {
         reference: dto.reference,
         amountMinor: String(dto.amount_minor),
         currency: dto.currency.toUpperCase(),
-        status: 'created',
+        status: PAYMENT_STATUS.CREATED,
         providerAccountId: account.id,
         method: dto.method,
         capturedMinor: '0',
@@ -76,15 +87,64 @@ export class PaymentsService {
 
   async loadById(
     id: string,
-    auth: AuthContext,
+    auth: { organizationId: string; applicationId?: string },
   ): Promise<Payment | null> {
-    return this.repo.findOne({
-      where: {
-        id,
-        organizationId: auth.organizationId,
-        applicationId: auth.applicationId,
-      },
-    });
+    const where: { id: string; organizationId: string; applicationId?: string } = {
+      id,
+      organizationId: auth.organizationId,
+    };
+    if (auth.applicationId) where.applicationId = auth.applicationId;
+    return this.repo.findOne({ where });
+  }
+
+  async loadByIdForActor(
+    id: string,
+    actor: Actor,
+  ): Promise<Payment | null> {
+    if (!isUuid(id)) {
+      throw new BadRequestException('malformed payment id');
+    }
+    const where: { id: string; organizationId?: string } = { id };
+    if (!actor.isSuperAdmin) {
+      if (!actor.organizationId) return null;
+      where.organizationId = actor.organizationId;
+    }
+    return this.repo.findOne({ where });
+  }
+
+  async listForActor(actor: Actor, filter: FilterDto): Promise<PaymentModel[]> {
+    const organizationId = actor.isSuperAdmin
+      ? filter.organizationId ?? null
+      : actor.organizationId;
+    if (!actor.isSuperAdmin && !organizationId) return [];
+
+    const qb = this.repo
+      .createQueryBuilder('p')
+      .orderBy('p.created_at', 'DESC');
+
+    if (organizationId) {
+      qb.andWhere('p.organization_id = :organizationId', { organizationId });
+    }
+    if (filter.applicationId) {
+      qb.andWhere('p.application_id = :applicationId', {
+        applicationId: filter.applicationId,
+      });
+    }
+
+    const rows = await qb.getMany();
+    return Promise.all(
+      rows.map(async (row) =>
+        toPaymentModel(row, await this.customers.forPayment(row.id)),
+      ),
+    );
+  }
+
+  async requireByIdForActor(actor: Actor, id: string): Promise<PaymentModel> {
+    const row = await this.loadByIdForActor(id, actor);
+    if (!row) {
+      throw new NotFoundException(`Payment not found ${id}`);
+    }
+    return toPaymentModel(row, await this.customers.forPayment(row.id));
   }
 
   async customerFor(paymentId: string) {

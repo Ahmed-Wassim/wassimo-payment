@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import type { PaymentStatus } from '../states.ts';
+import { PAYMENT_STATUS } from '../states.ts';
 
 @Entity('payments')
 @Index('payments_org_reference', ['organizationId', 'reference'], {
@@ -31,7 +32,7 @@ export class Payment {
   @Column({ type: 'char', length: 3 })
   currency!: string;
 
-  @Column({ default: 'created' })
+  @Column({ default: PAYMENT_STATUS.CREATED })
   status!: PaymentStatus;
 
   @Column({ name: 'provider_account_id', type: 'uuid', nullable: true })

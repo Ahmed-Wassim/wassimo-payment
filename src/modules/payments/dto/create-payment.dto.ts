@@ -1,4 +1,4 @@
-import { IsDefined, IsInt, IsNotEmpty, IsString, IsUUID, Length, Min, ValidateNested } from 'class-validator';
+import { IsDefined, IsInt, IsNotEmpty, IsString, IsUUID, Length, Max, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CustomerDetailsDto } from './customer-details.dto.ts';
 
@@ -6,7 +6,7 @@ export class CreatePaymentDto {
   @IsString() @IsNotEmpty()
   reference!: string;
 
-  @IsInt() @Min(1)
+  @IsInt() @Min(1) @Max(Number.MAX_SAFE_INTEGER)
   amount_minor!: number;
 
   @IsString() @Length(3, 3)
