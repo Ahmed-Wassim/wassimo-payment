@@ -1,13 +1,17 @@
-import type { MigrationInterface, QueryRunner } from 'typeorm';
+import { Table, type MigrationInterface, type QueryRunner } from 'typeorm';
 
 export class ProofOfRunner1793471943782 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `CREATE TABLE IF NOT EXISTS "proof_of_runner" (id int);`,
+    await queryRunner.createTable(
+      new Table({
+        name: 'proof_of_runner',
+        columns: [{ name: 'id', type: 'int', isNullable: true }],
+      }),
+      true,
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE IF EXISTS "proof_of_runner";`);
+    await queryRunner.dropTable('proof_of_runner', true);
   }
 }

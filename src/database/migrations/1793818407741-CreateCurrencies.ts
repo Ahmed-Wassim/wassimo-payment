@@ -1,21 +1,35 @@
-import type { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  Table,
+  TableCheck,
+  type MigrationInterface,
+  type QueryRunner,
+} from 'typeorm';
 
 export class CreateCurrencies1793818407741 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-            CREATE TABLE "currencies" (
-                "id" SERIAL PRIMARY KEY,
-                "code" VARCHAR(3) NOT NULL UNIQUE,
-                "exponent" SMALLINT NOT NULL CHECK ("exponent" >= 0 AND "exponent" <= 4),
-                "symbol" TEXT NOT NULL,
-                "enabled"    BOOLEAN NOT NULL DEFAULT true,
-                "created_at" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-
+    await queryRunner.createTable(
+      new Table({
+        name: 'currencies',
+        columns: [
+          { name: 'id', type: 'serial', isPrimary: true },
+          { name: 'code', type: 'varchar', length: '3', isUnique: true },
+          { name: 'exponent', type: 'smallint' },
+          { name: 'symbol', type: 'text' },
+          { name: 'enabled', type: 'boolean', default: true },
+          {
+            name: 'created_at',
+            type: 'timestamptz',
+            default: 'CURRENT_TIMESTAMP',
+          },
+        ],
+        checks: [
+          new TableCheck({ expression: '"exponent" >= 0 AND "exponent" <= 4' }),
+        ],
+      }),
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE "currencies"`);
+    await queryRunner.dropTable('currencies');
   }
 }

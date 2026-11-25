@@ -1,126 +1,171 @@
-import type { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  Table,
+  TableForeignKey,
+  TableUnique,
+  type MigrationInterface,
+  type QueryRunner,
+} from 'typeorm';
 
 export class CreateUsersRolesPermissions1794254878805 implements MigrationInterface {
   name = 'CreateUsersRolesPermissions1794254878805';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-      CREATE TABLE "permissions" (
-        "code" TEXT NOT NULL,
-        "name" TEXT NOT NULL,
-        "group_name" TEXT NOT NULL,
-        CONSTRAINT "PK_permissions" PRIMARY KEY ("code")
-      );
-    `);
+    await queryRunner.createTable(
+      new Table({
+        name: 'permissions',
+        columns: [
+          { name: 'code', type: 'text', isPrimary: true },
+          { name: 'name', type: 'text' },
+          { name: 'group_name', type: 'text' },
+        ],
+      }),
+    );
+    await queryRunner.createTable(
+      new Table({
+        name: 'roles',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            default: 'gen_random_uuid()',
+          },
+          { name: 'organization_id', type: 'uuid', isNullable: true },
+          { name: 'name', type: 'text' },
+          { name: 'created_by', type: 'uuid', isNullable: true },
+          { name: 'created_at', type: 'timestamptz', default: 'now()' },
+        ],
+      }),
+    );
+    await queryRunner.createTable(
+      new Table({
+        name: 'role_permissions',
+        columns: [
+          { name: 'role_id', type: 'uuid', isPrimary: true },
+          { name: 'permission_code', type: 'text', isPrimary: true },
+        ],
+      }),
+    );
+    await queryRunner.createTable(
+      new Table({
+        name: 'users',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            default: 'gen_random_uuid()',
+          },
+          { name: 'email', type: 'varchar', length: '255' },
+          { name: 'password_hash', type: 'varchar', length: '255' },
+          {
+            name: 'status',
+            type: 'varchar',
+            length: '32',
+            default: "'active'",
+          },
+          { name: 'is_super_admin', type: 'boolean', default: false },
+          { name: 'created_at', type: 'timestamptz', default: 'now()' },
+          { name: 'updated_at', type: 'timestamptz', default: 'now()' },
+        ],
+        uniques: [
+          new TableUnique({ name: 'UQ_users_email', columnNames: ['email'] }),
+        ],
+      }),
+    );
+    await queryRunner.createTable(
+      new Table({
+        name: 'org_memberships',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            default: 'gen_random_uuid()',
+          },
+          { name: 'user_id', type: 'uuid' },
+          { name: 'organization_id', type: 'uuid' },
+          { name: 'role_id', type: 'uuid' },
+          { name: 'created_at', type: 'timestamptz', default: 'now()' },
+        ],
+        uniques: [
+          new TableUnique({
+            name: 'UQ_org_memberships_user_id',
+            columnNames: ['user_id'],
+          }),
+        ],
+      }),
+    );
 
-    await queryRunner.query(`
-      CREATE TABLE "roles" (
-        "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-        "organization_id" UUID,
-        "name" TEXT NOT NULL,
-        "created_by" UUID,
-        "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-        CONSTRAINT "PK_roles" PRIMARY KEY ("id")
-      );
-    `);
-
-    await queryRunner.query(`
-      CREATE TABLE "role_permissions" (
-        "role_id" UUID NOT NULL,
-        "permission_code" TEXT NOT NULL,
-        CONSTRAINT "PK_role_permissions" PRIMARY KEY ("role_id", "permission_code")
-      );
-    `);
-
-    await queryRunner.query(`
-      CREATE TABLE "users" (
-        "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-        "email" VARCHAR(255) NOT NULL,
-        "password_hash" VARCHAR(255) NOT NULL,
-        "status" VARCHAR(32) NOT NULL DEFAULT 'active',
-        "is_super_admin" BOOLEAN NOT NULL DEFAULT false,
-        "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-        "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-        CONSTRAINT "UQ_users_email" UNIQUE ("email"),
-        CONSTRAINT "PK_users" PRIMARY KEY ("id")
-      );
-    `);
-
-    await queryRunner.query(`
-      CREATE TABLE "org_memberships" (
-        "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-        "user_id" UUID NOT NULL,
-        "organization_id" UUID NOT NULL,
-        "role_id" UUID NOT NULL,
-        "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-        CONSTRAINT "UQ_org_memberships_user_id" UNIQUE ("user_id"),
-        CONSTRAINT "PK_org_memberships" PRIMARY KEY ("id")
-      );
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE "roles"
-        ADD CONSTRAINT "FK_roles_organization_id"
-        FOREIGN KEY ("organization_id") REFERENCES "organizations"("id")
-        ON DELETE CASCADE ON UPDATE NO ACTION;
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE "roles"
-        ADD CONSTRAINT "FK_roles_created_by"
-        FOREIGN KEY ("created_by") REFERENCES "users"("id")
-        ON DELETE SET NULL ON UPDATE NO ACTION;
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE "role_permissions"
-        ADD CONSTRAINT "FK_role_permissions_role_id"
-        FOREIGN KEY ("role_id") REFERENCES "roles"("id")
-        ON DELETE CASCADE ON UPDATE NO ACTION;
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE "role_permissions"
-        ADD CONSTRAINT "FK_role_permissions_permission_code"
-        FOREIGN KEY ("permission_code") REFERENCES "permissions"("code")
-        ON DELETE CASCADE ON UPDATE NO ACTION;
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE "org_memberships"
-        ADD CONSTRAINT "FK_org_memberships_user_id"
-        FOREIGN KEY ("user_id") REFERENCES "users"("id")
-        ON DELETE CASCADE ON UPDATE NO ACTION;
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE "org_memberships"
-        ADD CONSTRAINT "FK_org_memberships_organization_id"
-        FOREIGN KEY ("organization_id") REFERENCES "organizations"("id")
-        ON DELETE CASCADE ON UPDATE NO ACTION;
-    `);
-
-    await queryRunner.query(`
-      ALTER TABLE "org_memberships"
-        ADD CONSTRAINT "FK_org_memberships_role_id"
-        FOREIGN KEY ("role_id") REFERENCES "roles"("id")
-        ON DELETE NO ACTION ON UPDATE NO ACTION;
-    `);
-
+    await queryRunner.createForeignKeys('roles', [
+      new TableForeignKey({
+        name: 'FK_roles_organization_id',
+        columnNames: ['organization_id'],
+        referencedTableName: 'organizations',
+        referencedColumnNames: ['id'],
+        onDelete: 'CASCADE',
+        onUpdate: 'NO ACTION',
+      }),
+      new TableForeignKey({
+        name: 'FK_roles_created_by',
+        columnNames: ['created_by'],
+        referencedTableName: 'users',
+        referencedColumnNames: ['id'],
+        onDelete: 'SET NULL',
+        onUpdate: 'NO ACTION',
+      }),
+    ]);
+    await queryRunner.createForeignKeys('role_permissions', [
+      new TableForeignKey({
+        name: 'FK_role_permissions_role_id',
+        columnNames: ['role_id'],
+        referencedTableName: 'roles',
+        referencedColumnNames: ['id'],
+        onDelete: 'CASCADE',
+        onUpdate: 'NO ACTION',
+      }),
+      new TableForeignKey({
+        name: 'FK_role_permissions_permission_code',
+        columnNames: ['permission_code'],
+        referencedTableName: 'permissions',
+        referencedColumnNames: ['code'],
+        onDelete: 'CASCADE',
+        onUpdate: 'NO ACTION',
+      }),
+    ]);
+    await queryRunner.createForeignKeys('org_memberships', [
+      new TableForeignKey({
+        name: 'FK_org_memberships_user_id',
+        columnNames: ['user_id'],
+        referencedTableName: 'users',
+        referencedColumnNames: ['id'],
+        onDelete: 'CASCADE',
+        onUpdate: 'NO ACTION',
+      }),
+      new TableForeignKey({
+        name: 'FK_org_memberships_organization_id',
+        columnNames: ['organization_id'],
+        referencedTableName: 'organizations',
+        referencedColumnNames: ['id'],
+        onDelete: 'CASCADE',
+        onUpdate: 'NO ACTION',
+      }),
+      new TableForeignKey({
+        name: 'FK_org_memberships_role_id',
+        columnNames: ['role_id'],
+        referencedTableName: 'roles',
+        referencedColumnNames: ['id'],
+        onDelete: 'NO ACTION',
+        onUpdate: 'NO ACTION',
+      }),
+    ]);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "org_memberships" DROP CONSTRAINT "FK_org_memberships_role_id"`);
-    await queryRunner.query(`ALTER TABLE "org_memberships" DROP CONSTRAINT "FK_org_memberships_organization_id"`);
-    await queryRunner.query(`ALTER TABLE "org_memberships" DROP CONSTRAINT "FK_org_memberships_user_id"`);
-    await queryRunner.query(`ALTER TABLE "role_permissions" DROP CONSTRAINT "FK_role_permissions_permission_code"`);
-    await queryRunner.query(`ALTER TABLE "role_permissions" DROP CONSTRAINT "FK_role_permissions_role_id"`);
-    await queryRunner.query(`ALTER TABLE "roles" DROP CONSTRAINT "FK_roles_created_by"`);
-    await queryRunner.query(`ALTER TABLE "roles" DROP CONSTRAINT "FK_roles_organization_id"`);
-    await queryRunner.query(`DROP TABLE "org_memberships"`);
-    await queryRunner.query(`DROP TABLE "users"`);
-    await queryRunner.query(`DROP TABLE "role_permissions"`);
-    await queryRunner.query(`DROP TABLE "roles"`);
-    await queryRunner.query(`DROP TABLE "permissions"`);
+    await queryRunner.dropTable('org_memberships');
+    await queryRunner.dropTable('role_permissions');
+    await queryRunner.dropTable('roles');
+    await queryRunner.dropTable('users');
+    await queryRunner.dropTable('permissions');
   }
 }

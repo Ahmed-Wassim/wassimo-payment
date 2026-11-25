@@ -1,27 +1,45 @@
-import type { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  TableColumn,
+  type MigrationInterface,
+  type QueryRunner,
+} from 'typeorm';
 
 export class TightenTimestampColumns1793968100000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "organizations" ALTER COLUMN "created_at" SET NOT NULL, ALTER COLUMN "created_at" SET DEFAULT now()`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "organizations" ALTER COLUMN "updated_at" SET NOT NULL, ALTER COLUMN "updated_at" SET DEFAULT now()`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "currencies" ALTER COLUMN "created_at" SET NOT NULL, ALTER COLUMN "created_at" SET DEFAULT now()`,
-    );
+    for (const [table, column] of [
+      ['organizations', 'created_at'],
+      ['organizations', 'updated_at'],
+      ['currencies', 'created_at'],
+    ]) {
+      await queryRunner.changeColumn(
+        table,
+        column,
+        new TableColumn({
+          name: column,
+          type: 'timestamptz',
+          isNullable: false,
+          default: 'now()',
+        }),
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "organizations" ALTER COLUMN "created_at" DROP NOT NULL, ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "organizations" ALTER COLUMN "updated_at" DROP NOT NULL, ALTER COLUMN "updated_at" SET DEFAULT CURRENT_TIMESTAMP`,
-    );
-    await queryRunner.query(
-      `ALTER TABLE "currencies" ALTER COLUMN "created_at" DROP NOT NULL, ALTER COLUMN "created_at" SET DEFAULT CURRENT_TIMESTAMP`,
-    );
+    for (const [table, column] of [
+      ['organizations', 'created_at'],
+      ['organizations', 'updated_at'],
+      ['currencies', 'created_at'],
+    ]) {
+      await queryRunner.changeColumn(
+        table,
+        column,
+        new TableColumn({
+          name: column,
+          type: 'timestamptz',
+          isNullable: true,
+          default: 'CURRENT_TIMESTAMP',
+        }),
+      );
+    }
   }
 }
