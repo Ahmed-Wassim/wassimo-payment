@@ -28,7 +28,10 @@ import { Refund } from './entities/refund.entity.ts';
 @Injectable()
 export class RefundsService {
   constructor(
-    @InjectRepository(Refund) private readonly refunds: Repository<Refund>,
+    @InjectRepository(Refund)
+    private readonly refunds: Repository<Refund>,
+    @InjectRepository(PaymentAttempt)
+    private readonly attempts: Repository<PaymentAttempt>,
     private readonly dataSource: DataSource,
     private readonly payments: PaymentsService,
     private readonly providers: ProviderAccountsService,
@@ -41,22 +44,37 @@ export class RefundsService {
     dto: { amount_minor: number; reason?: string },
   ): Promise<{ refund: Refund; raceLost: boolean }> {
     if (!isUuid(paymentId)) {
-      throw new ApiError('validation_error', HttpStatus.BAD_REQUEST, 'malformed payment id');
+      throw new ApiError(
+        'validation_error',
+        HttpStatus.BAD_REQUEST,
+        'malformed payment id',
+      );
     }
     if (!Number.isSafeInteger(dto.amount_minor) || dto.amount_minor <= 0) {
-      throw new ApiError('validation_error', HttpStatus.BAD_REQUEST, 'amount_minor must be a positive safe integer');
+      throw new ApiError(
+        'validation_error',
+        HttpStatus.BAD_REQUEST,
+        'amount_minor must be a positive safe integer',
+      );
     }
 
     const payment = await this.payments.loadById(paymentId, auth);
     if (!payment) {
-      throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'payment not found');
+      throw new ApiError(
+        'not_found',
+        HttpStatus.NOT_FOUND,
+        'payment not found',
+      );
     }
     if (payment.status !== PAYMENT_STATUS.SUCCEEDED) {
-      throw new ApiError('refund_not_allowed', HttpStatus.CONFLICT, `payment status is '${payment.status}'; refunds need '${REFUND_STATUS.SUCCEEDED}'`);
+      throw new ApiError(
+        'refund_not_allowed',
+        HttpStatus.CONFLICT,
+        `payment status is '${payment.status}'; refunds need '${REFUND_STATUS.SUCCEEDED}'`,
+      );
     }
 
-    const attempt = await this.dataSource
-      .getRepository(PaymentAttempt)
+    const attempt = await this.attempts
       .createQueryBuilder('a')
       .leftJoinAndSelect('a.providerAccount', 'providerAccount')
       .where('a.payment_id = :pid', { pid: payment.id })
@@ -64,7 +82,11 @@ export class RefundsService {
       .orderBy('a.created_at', 'DESC')
       .getOne();
     if (!attempt || !attempt.providerReference) {
-      throw new ApiError('refund_not_allowed', HttpStatus.CONFLICT, 'provider reference unknown — resolve the payment first');
+      throw new ApiError(
+        'refund_not_allowed',
+        HttpStatus.CONFLICT,
+        'provider reference unknown — resolve the payment first',
+      );
     }
 
     let account;
@@ -72,12 +94,20 @@ export class RefundsService {
       account = await this.providers.requireById(attempt.providerAccount.id);
     } catch (e) {
       if (e instanceof NotFoundException) {
-        throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this organization');
+        throw new ApiError(
+          'provider_account_not_found',
+          HttpStatus.NOT_FOUND,
+          'unknown provider account for this organization',
+        );
       }
       throw e;
     }
     if (account.organization.id !== payment.organizationId) {
-      throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this organization');
+      throw new ApiError(
+        'provider_account_not_found',
+        HttpStatus.NOT_FOUND,
+        'unknown provider account for this organization',
+      );
     }
     if (
       account.providerCode === PROVIDER_CODE.Fawaterak &&
@@ -96,7 +126,10 @@ export class RefundsService {
         where: { id: payment.id },
         lock: { mode: 'pessimistic_write' },
       });
-      if (!currentPayment || currentPayment.status !== PAYMENT_STATUS.SUCCEEDED) {
+      if (
+        !currentPayment ||
+        currentPayment.status !== PAYMENT_STATUS.SUCCEEDED
+      ) {
         throw new ApiError(
           'refund_not_allowed',
           HttpStatus.CONFLICT,
@@ -171,12 +204,24 @@ export class RefundsService {
       const row = await tx.findOneByOrFail(Refund, { id: refund.id });
       refundTransition(row.status, REFUND_STATUS.PROCESSING);
       refundTransition(REFUND_STATUS.PROCESSING, outcome);
-      await tx.update(Refund, { id: row.id }, { status: outcome, providerRef: refundRef });
+      await tx.update(
+        Refund,
+        { id: row.id },
+        { status: outcome, providerRef: refundRef },
+      );
       let raceLost = false;
       if (outcome === PROVIDER_RESULT.SUCCEEDED) {
-        raceLost = await this.arbitrateConfirm(tx, row.id, String(dto.amount_minor), payment.id);
+        raceLost = await this.arbitrateConfirm(
+          tx,
+          row.id,
+          String(dto.amount_minor),
+          payment.id,
+        );
       }
-      return { refund: await tx.findOneByOrFail(Refund, { id: row.id }), raceLost };
+      return {
+        refund: await tx.findOneByOrFail(Refund, { id: row.id }),
+        raceLost,
+      };
     });
   }
 
@@ -186,10 +231,16 @@ export class RefundsService {
     refundId: string,
   ): Promise<{ refund: Refund; raceLost: boolean }> {
     if (!isUuid(paymentId) || !isUuid(refundId)) {
-      throw new ApiError('validation_error', HttpStatus.BAD_REQUEST, 'malformed refund path');
+      throw new ApiError(
+        'validation_error',
+        HttpStatus.BAD_REQUEST,
+        'malformed refund path',
+      );
     }
     const payment = await this.payments.loadById(paymentId, auth);
-    const refund = await this.refunds.findOne({ where: { id: refundId, paymentId } });
+    const refund = await this.refunds.findOne({
+      where: { id: refundId, paymentId },
+    });
     if (!payment || !refund || refund.organizationId !== auth.organizationId) {
       throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'refund not found');
     }
@@ -197,7 +248,11 @@ export class RefundsService {
       refund.status !== REFUND_STATUS.UNKNOWN &&
       refund.status !== REFUND_STATUS.PROCESSING
     ) {
-      throw new ApiError('nothing_to_resolve', HttpStatus.CONFLICT, 'nothing unresolved on this refund');
+      throw new ApiError(
+        'nothing_to_resolve',
+        HttpStatus.CONFLICT,
+        'nothing unresolved on this refund',
+      );
     }
     if (!refund.providerRef) {
       throw new ApiError(
@@ -207,25 +262,31 @@ export class RefundsService {
       );
     }
 
-    const attempt = await this.dataSource
-      .getRepository(PaymentAttempt)
-      .findOne({
-        where: {
-          payment: { id: paymentId },
-          status: ATTEMPT_STATUS.SUCCEEDED,
-        },
-        relations: { providerAccount: true },
-        order: { createdAt: 'DESC' },
-      });
+    const attempt = await this.attempts.findOne({
+      where: {
+        payment: { id: paymentId },
+        status: ATTEMPT_STATUS.SUCCEEDED,
+      },
+      relations: { providerAccount: true },
+      order: { createdAt: 'DESC' },
+    });
     if (!attempt) {
-      throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this organization');
+      throw new ApiError(
+        'provider_account_not_found',
+        HttpStatus.NOT_FOUND,
+        'unknown provider account for this organization',
+      );
     }
     let account;
     try {
       account = await this.providers.requireById(attempt.providerAccount.id);
     } catch (e) {
       if (e instanceof NotFoundException) {
-        throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this organization');
+        throw new ApiError(
+          'provider_account_not_found',
+          HttpStatus.NOT_FOUND,
+          'unknown provider account for this organization',
+        );
       }
       throw e;
     }
@@ -251,9 +312,17 @@ export class RefundsService {
       await tx.update(Refund, { id: row.id }, { status: outcome });
       let raceLost = false;
       if (outcome === PROVIDER_RESULT.SUCCEEDED) {
-        raceLost = await this.arbitrateConfirm(tx, row.id, refund.amountMinor, refund.paymentId);
+        raceLost = await this.arbitrateConfirm(
+          tx,
+          row.id,
+          refund.amountMinor,
+          refund.paymentId,
+        );
       }
-      return { refund: await tx.findOneByOrFail(Refund, { id: row.id }), raceLost };
+      return {
+        refund: await tx.findOneByOrFail(Refund, { id: row.id }),
+        raceLost,
+      };
     });
   }
 
@@ -274,7 +343,11 @@ export class RefundsService {
     const affected = Array.isArray(res) ? res[1] : (res.rowCount ?? 0);
     if (affected === 0) {
       refundTransition(REFUND_STATUS.PROCESSING, REFUND_STATUS.FAILED);
-      await tx.update(Refund, { id: refundId }, { status: REFUND_STATUS.FAILED });
+      await tx.update(
+        Refund,
+        { id: refundId },
+        { status: REFUND_STATUS.FAILED },
+      );
       console.error(`refund ${refundId}: lost available race at confirm`);
       return true;
     }

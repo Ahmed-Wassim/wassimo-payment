@@ -22,7 +22,9 @@ export interface VerifiedCredential {
 export class CredentialsService {
   constructor(
     @InjectRepository(ApiCredential)
-    private readonly repo: Repository<ApiCredential>,
+    private readonly credentialsRepo: Repository<ApiCredential>,
+    @InjectRepository(Application)
+    private readonly applicationsRepo: Repository<Application>,
   ) {}
 
   async issue(
@@ -35,7 +37,7 @@ export class CredentialsService {
     const prefix = `wpk_${keyId}`;
     const token = `${prefix}_${secret}`;
 
-    await this.repo.manager.transaction(async (manager) => {
+    await this.credentialsRepo.manager.transaction(async (manager) => {
       await manager.update(
         ApiCredential,
         {
@@ -67,7 +69,7 @@ export class CredentialsService {
     const keyId = rest.slice(0, sep);
     const secret = rest.slice(sep + 1);
 
-    const row = await this.repo.findOne({
+    const row = await this.credentialsRepo.findOne({
       where: { keyId, status: CREDENTIAL_STATUS.ACTIVE },
       relations: { application: { organization: true } },
     });
@@ -88,14 +90,14 @@ export class CredentialsService {
   }
 
   async touchLastUsed(id: string): Promise<void> {
-    await this.repo.update(id, { lastUsedAt: new Date() });
+    await this.credentialsRepo.update(id, { lastUsedAt: new Date() });
   }
 
   async issueForActor(
     actor: { organizationId: string | null; isSuperAdmin: boolean },
     dto: IssueCredentialDto,
   ) {
-    const app = await this.repo.manager.findOne(Application, {
+    const app = await this.applicationsRepo.findOne({
       where: { id: dto.applicationId },
       relations: { organization: true },
     });
@@ -125,7 +127,7 @@ export class CredentialsService {
 
     if (!actor.isSuperAdmin && !organizationId) return [];
 
-    const rows = await this.repo.find({
+    const rows = await this.credentialsRepo.find({
       where: organizationId
         ? { application: { organization: { id: organizationId } } }
         : {},
@@ -143,7 +145,7 @@ export class CredentialsService {
       throw new NotFoundException(`Credential not found ${id}`);
     }
 
-    const row = await this.repo.findOne({
+    const row = await this.credentialsRepo.findOne({
       where: actor.isSuperAdmin
         ? { id }
         : {
@@ -157,7 +159,7 @@ export class CredentialsService {
     if (row.status !== CREDENTIAL_STATUS.REVOKED) {
       row.status = CREDENTIAL_STATUS.REVOKED;
       row.revokedAt = new Date();
-      await this.repo.update(id, {
+      await this.credentialsRepo.update(id, {
         status: row.status,
         revokedAt: row.revokedAt,
       });
@@ -174,7 +176,7 @@ export class CredentialsService {
       throw new NotFoundException(`Credential not found ${id}`);
     }
 
-    const row = await this.repo.findOne({
+    const row = await this.credentialsRepo.findOne({
       where: actor.isSuperAdmin
         ? { id }
         : {

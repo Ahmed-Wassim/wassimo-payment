@@ -29,6 +29,10 @@ export class ProviderAccountsService {
   constructor(
     @InjectRepository(ProviderAccount)
     private readonly accounts: Repository<ProviderAccount>,
+    @InjectRepository(Organization)
+    private readonly organizations: Repository<Organization>,
+    @InjectRepository(Application)
+    private readonly applications: Repository<Application>,
     private readonly providers: ProvidersService,
   ) {}
 
@@ -130,13 +134,13 @@ export class ProviderAccountsService {
       );
     }
 
-    const org = await this.accounts.manager.findOne(Organization, {
+    const org = await this.organizations.findOne({
       where: { id: organizationId },
     });
     if (!org) {
       throw new NotFoundException(`Organization not found ${organizationId}`);
     }
-    const application = await this.accounts.manager.findOne(Application, {
+    const application = await this.applications.findOne({
       where: {
         id: dto.applicationId,
         organization: { id: organizationId },

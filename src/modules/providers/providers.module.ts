@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module.ts';
 import { CurrenciesModule } from '../currencies/currencies.module.ts';
 import { PaymentAttempt } from '../payments/entities/payment-attempt.entity.ts';
+import { Application } from '../applications/entities/application.entity.ts';
+import { Organization } from '../organizations/entities/organization.entity.ts';
 import { UsersModule } from '../users/users.module.ts';
 import { ProviderAccount } from './accounts/entity/provider-account.entity.ts';
 import { ProviderAccountsController } from './accounts/provider-accounts.controller.ts';
@@ -25,6 +27,8 @@ import { ProvidersService } from './providers.service.ts';
       ProviderAccount,
       ProviderCredential,
       PaymentAttempt,
+      Application,
+      Organization,
     ]),
     CurrenciesModule,
     forwardRef(() => AuthModule),
