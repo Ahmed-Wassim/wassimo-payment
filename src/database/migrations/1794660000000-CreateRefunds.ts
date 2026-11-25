@@ -1,24 +1,62 @@
-import type { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  Table,
+  TableCheck,
+  TableForeignKey,
+  TableIndex,
+  type MigrationInterface,
+  type QueryRunner,
+} from 'typeorm';
 
 export class CreateRefunds1794660000000 implements MigrationInterface {
   public async up(q: QueryRunner): Promise<void> {
-    await q.query(`
-      CREATE TABLE refunds (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        payment_id UUID NOT NULL REFERENCES payments(id),
-        organization_id UUID NOT NULL REFERENCES organizations(id),
-        amount_minor BIGINT NOT NULL CHECK (amount_minor > 0),
-        currency CHAR(3) NOT NULL REFERENCES currencies(code),
-        status TEXT NOT NULL DEFAULT 'requested',
-        provider_ref TEXT,
-        reason TEXT,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      )`);
-    await q.query(`CREATE INDEX refunds_payment ON refunds (payment_id)`);
+    await q.createTable(
+      new Table({
+        name: 'refunds',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            default: 'gen_random_uuid()',
+          },
+          { name: 'payment_id', type: 'uuid' },
+          { name: 'organization_id', type: 'uuid' },
+          { name: 'amount_minor', type: 'bigint' },
+          { name: 'currency', type: 'char', length: '3' },
+          { name: 'status', type: 'text', default: "'requested'" },
+          { name: 'provider_ref', type: 'text', isNullable: true },
+          { name: 'reason', type: 'text', isNullable: true },
+          { name: 'created_at', type: 'timestamptz', default: 'now()' },
+          { name: 'updated_at', type: 'timestamptz', default: 'now()' },
+        ],
+        checks: [new TableCheck({ expression: 'amount_minor > 0' })],
+      }),
+    );
+    await q.createForeignKeys('refunds', [
+      new TableForeignKey({
+        columnNames: ['payment_id'],
+        referencedTableName: 'payments',
+        referencedColumnNames: ['id'],
+      }),
+      new TableForeignKey({
+        columnNames: ['organization_id'],
+        referencedTableName: 'organizations',
+        referencedColumnNames: ['id'],
+      }),
+      new TableForeignKey({
+        columnNames: ['currency'],
+        referencedTableName: 'currencies',
+        referencedColumnNames: ['code'],
+      }),
+    ]);
+    await q.createIndex(
+      'refunds',
+      new TableIndex({ name: 'refunds_payment', columnNames: ['payment_id'] }),
+    );
   }
 
   public async down(q: QueryRunner): Promise<void> {
-    await q.query(`DROP TABLE refunds`);
+    await q.dropIndex('refunds', 'refunds_payment');
+    await q.dropTable('refunds');
   }
 }
