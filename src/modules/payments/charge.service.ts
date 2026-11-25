@@ -39,6 +39,7 @@ export class ChargeService {
   async charge(
     auth: AuthContext,
     paymentId: string,
+    returnUrl?: string | null,
   ): Promise<{ attempt_id: string; redirect_url: string | null }> {
     if (!isUuid(paymentId)) {
       throw new ApiError(
@@ -181,6 +182,7 @@ export class ChargeService {
         currency: payment.currency,
         method: payment.method,
         customerDetails: customer ? toCustomerDetails(customer) : null,
+        returnUrl: returnUrl ?? null,
       });
       providerReference = result.providerReference;
       redirectUrl = result.redirectUrl;

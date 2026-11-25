@@ -48,7 +48,7 @@ export class PaytabsAdapter implements ProviderAdapter {
       cart_description: `payment ${input.paymentId}`,
       payment_methods: [input.method],
       callback: config.callback_url,
-      return: config.return_url,
+      return: input.returnUrl || config.return_url,
     };
     if (input.customerDetails) {
       body.customer_details = this.customerDetails(input.customerDetails);

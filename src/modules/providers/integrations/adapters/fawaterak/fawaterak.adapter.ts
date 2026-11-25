@@ -49,9 +49,9 @@ export class FawaterakAdapter implements ProviderAdapter {
       customer,
       cartItems: [{ name: `payment ${input.paymentId}`.slice(0, 50), price: amount, quantity: 1 }],
       redirectionUrls: {
-        successUrl: config.success_url,
-        failUrl: config.fail_url,
-        pendingUrl: config.pending_url,
+        successUrl: input.returnUrl || config.success_url,
+        failUrl: input.returnUrl || config.fail_url,
+        pendingUrl: input.returnUrl || config.pending_url,
         webhookUrl: config.webhook_url,
       },
       pay_load: { payment_id: input.paymentId },

@@ -35,6 +35,7 @@ export interface CheckoutInput {
   currency: string;
   method: string;
   customerDetails?: CheckoutCustomer | null;
+  returnUrl?: string | null;
 }
 
 export interface CheckoutResult {

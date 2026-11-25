@@ -93,8 +93,10 @@ export class PaymentsController {
   async chargePayment(
     @Req() req: { auth?: AuthContext },
     @Param('id') id: string,
+    @Body() body?: { return_url?: string },
   ) {
-    return this.charge.charge(req.auth!, id);
+    const returnUrl = typeof body?.return_url === 'string' && body.return_url.trim() !== '' ? body.return_url.trim() : null;
+    return this.charge.charge(req.auth!, id, returnUrl);
   }
 
   @Post('v1/payments/:id/resolve')

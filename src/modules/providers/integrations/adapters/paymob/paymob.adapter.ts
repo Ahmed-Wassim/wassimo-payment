@@ -58,7 +58,7 @@ export class PaymobAdapter implements ProviderAdapter {
           billing_data: this.billingData(input.customerDetails!),
           special_reference: input.paymentId,
           notification_url: config.notification_url,
-          redirection_url: config.redirection_url,
+          redirection_url: input.returnUrl || config.redirection_url,
         }),
         signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
       });
