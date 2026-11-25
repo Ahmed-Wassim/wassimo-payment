@@ -56,7 +56,7 @@ export class PaymentsController {
         req.auth!,
         idemKey,
         this.idempotency.fingerprint(dto),
-        (tx) => this.payments.createInTx(tx, req.auth!, dto),
+        (tx) => this.payments.createPayment(tx, req.auth!, dto),
       )
     ).id;
 

@@ -30,7 +30,7 @@ export class CustomersService {
     private readonly repo: Repository<Customer>,
   ) {}
 
-  async snapshotInTx(
+  async createSnapshotForPayment(
     em: EntityManager,
     paymentId: string,
     details: CustomerInput,

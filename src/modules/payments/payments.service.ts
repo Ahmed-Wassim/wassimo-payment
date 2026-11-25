@@ -29,7 +29,7 @@ export class PaymentsService {
     private readonly customers: CustomersService,
   ) {}
 
-  async createInTx(
+  async createPayment(
     em: EntityManager,
     auth: AuthContext,
     dto: CreatePaymentDto,
@@ -74,7 +74,11 @@ export class PaymentsService {
         refundedConfirmedMinor: '0',
       });
       if (dto.customer_details) {
-        await this.customers.snapshotInTx(em, payment.id, dto.customer_details);
+        await this.customers.createSnapshotForPayment(
+          em,
+          payment.id,
+          dto.customer_details,
+        );
       }
       return payment;
     } catch (e) {
