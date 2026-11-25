@@ -1,14 +1,22 @@
-import type { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  TableColumn,
+  TableForeignKey,
+  type MigrationInterface,
+  type QueryRunner,
+} from 'typeorm';
 
-export class BindProviderAccountsToApplications1794489000000
-  implements MigrationInterface {
+export class BindProviderAccountsToApplications1794489000000 implements MigrationInterface {
   name = 'BindProviderAccountsToApplications1794489000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-        ALTER TABLE "provider_accounts"
-        ADD "application_id" uuid
-    `);
+    await queryRunner.addColumn(
+      'provider_accounts',
+      new TableColumn({
+        name: 'application_id',
+        type: 'uuid',
+        isNullable: true,
+      }),
+    );
 
     await queryRunner.query(`
         UPDATE provider_accounts
@@ -17,28 +25,33 @@ export class BindProviderAccountsToApplications1794489000000
         )
     `);
 
-    await queryRunner.query(`
-        ALTER TABLE "provider_accounts"
-        ALTER COLUMN "application_id" SET NOT NULL
-    `);
-
-    await queryRunner.query(`
-        ALTER TABLE "provider_accounts"
-        ADD CONSTRAINT "FK_provider_accounts_application_id"
-        FOREIGN KEY ("application_id")
-        REFERENCES "applications"("id")
-        ON DELETE CASCADE ON UPDATE NO ACTION
-    `);
+    await queryRunner.changeColumn(
+      'provider_accounts',
+      'application_id',
+      new TableColumn({
+        name: 'application_id',
+        type: 'uuid',
+        isNullable: false,
+      }),
+    );
+    await queryRunner.createForeignKey(
+      'provider_accounts',
+      new TableForeignKey({
+        name: 'FK_provider_accounts_application_id',
+        columnNames: ['application_id'],
+        referencedTableName: 'applications',
+        referencedColumnNames: ['id'],
+        onDelete: 'CASCADE',
+        onUpdate: 'NO ACTION',
+      }),
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-        ALTER TABLE "provider_accounts"
-        DROP CONSTRAINT "FK_provider_accounts_application_id"
-    `);
-    await queryRunner.query(`
-        ALTER TABLE "provider_accounts"
-        DROP COLUMN "application_id"
-    `);
+    await queryRunner.dropForeignKey(
+      'provider_accounts',
+      'FK_provider_accounts_application_id',
+    );
+    await queryRunner.dropColumn('provider_accounts', 'application_id');
   }
 }

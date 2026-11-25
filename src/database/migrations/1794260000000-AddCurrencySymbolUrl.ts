@@ -1,11 +1,15 @@
-import type { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  TableColumn,
+  type MigrationInterface,
+  type QueryRunner,
+} from 'typeorm';
 
 export class AddCurrencySymbolUrl1794260000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-      ALTER TABLE "currencies"
-      ADD COLUMN "symbol_url" TEXT
-    `);
+    await queryRunner.addColumn(
+      'currencies',
+      new TableColumn({ name: 'symbol_url', type: 'text', isNullable: true }),
+    );
 
     await queryRunner.query(`
       UPDATE "currencies" SET "symbol_url" = CASE "code"
@@ -21,9 +25,6 @@ export class AddCurrencySymbolUrl1794260000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-      ALTER TABLE "currencies"
-      DROP COLUMN "symbol_url"
-    `);
+    await queryRunner.dropColumn('currencies', 'symbol_url');
   }
 }
