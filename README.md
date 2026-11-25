@@ -44,10 +44,10 @@ The console helps a person configure the service. The API credential is what an 
 
    Docker reports an error if the network already exists; in that case, keep using the existing network.
 
-4. Start PostgreSQL:
+4. Start PostgreSQL and the local telemetry dashboard:
 
    ```powershell
-   docker compose up -d payment-db
+   docker compose up -d payment-db aspire-dashboard
    ```
 
 5. Install the backend dependencies:
@@ -70,6 +70,8 @@ The console helps a person configure the service. The API credential is what an 
    ```
 
    With the example `.env`, the backend listens at `http://localhost:8080`. Check `http://localhost:8080/health` for liveness and `http://localhost:8080/ready` for database readiness.
+
+   Open the Aspire dashboard at `http://localhost:18888` to inspect this service's traces and logs. Sign in using the login URL printed by `docker compose logs aspire-dashboard`. The dashboard stores its data in the `payment-telemetry-data` Docker volume.
 
 The Compose file can also run the backend container and maps it to host port `9053`. The companion console's default API URL is `http://127.0.0.1:9053`; if you run the backend directly with `npm run start:dev`, set the console's `VITE_API_URL` to `http://127.0.0.1:8080` instead.
 

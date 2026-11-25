@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
@@ -27,6 +27,8 @@ import { Refund } from './entities/refund.entity.ts';
 
 @Injectable()
 export class RefundsService {
+  private readonly logger = new Logger(RefundsService.name);
+
   constructor(
     @InjectRepository(Refund)
     private readonly refunds: Repository<Refund>,
@@ -348,7 +350,7 @@ export class RefundsService {
         { id: refundId },
         { status: REFUND_STATUS.FAILED },
       );
-      console.error(`refund ${refundId}: lost available race at confirm`);
+      this.logger.error(`refund ${refundId}: lost available race at confirm`);
       return true;
     }
     return false;

@@ -4,6 +4,7 @@ export const ENTITY_GLOB = 'dist/**/*.entity.js';
 
 export interface AppConfig {
   app: { port: number; env: 'dev' | 'prod'; url: string };
+  observability: { otlpEndpoint: string | null };
   db: { url: string };
   broker: { url: string };
   outbox: { pollSeconds: number };
@@ -17,6 +18,9 @@ export function loadConfig(): AppConfig {
   const env = validateEnv(process.env);
   return {
     app: { port: env.PORT, env: env.ENV, url: env.APP_URL },
+    observability: {
+      otlpEndpoint: env.OTEL_EXPORTER_OTLP_ENDPOINT || null,
+    },
     db: { url: env.DATABASE_URL },
     broker: { url: env.RABBITMQ_URL },
     outbox: { pollSeconds: env.OUTBOX_POLL_SECONDS },

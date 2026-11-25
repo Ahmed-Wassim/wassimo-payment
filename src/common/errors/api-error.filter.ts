@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { SpanStatusCode, trace } from '@opentelemetry/api';
 import type { ErrorCode } from './error-codes.ts';
 
 const STATUS_TO_CODE: Record<number, ErrorCode> = {
@@ -47,6 +48,17 @@ export class ApiErrorFilter implements ExceptionFilter {
           details: null,
         },
       };
+    }
+
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      const span = trace.getActiveSpan();
+      if (exception instanceof Error) {
+        span?.recordException(exception);
+        this.logger.error(exception.message);
+      } else {
+        this.logger.error(String(exception));
+      }
+      span?.setStatus({ code: SpanStatusCode.ERROR });
     }
 
     this.logger.log(`status=${status}`);

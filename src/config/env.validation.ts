@@ -12,6 +12,7 @@ export interface EnvVars {
   ENCRYPTION_KEY?: string;
   MOCK_WEBHOOK_SECRET: string;
   APP_URL: string;
+  OTEL_EXPORTER_OTLP_ENDPOINT?: string;
 }
 
 export const envValidationSchema = Joi.object<EnvVars, true>({
@@ -31,6 +32,7 @@ export const envValidationSchema = Joi.object<EnvVars, true>({
     .when('ENV', { is: 'prod', then: Joi.required(), otherwise: Joi.optional() }),
   MOCK_WEBHOOK_SECRET: Joi.string().min(1).default('mock-dev-secret'),
   APP_URL: Joi.string().uri().default('http://localhost:9053'),
+  OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string().uri().allow('').optional(),
 }).unknown(true);
 
 export function validateEnv(env: NodeJS.ProcessEnv): EnvVars {
