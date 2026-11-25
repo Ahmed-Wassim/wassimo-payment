@@ -1,20 +1,24 @@
-import type { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  TableColumn,
+  type MigrationInterface,
+  type QueryRunner,
+} from 'typeorm';
 
-export class AddProviderMethodsColumn1794520000000
-  implements MigrationInterface {
+export class AddProviderMethodsColumn1794520000000 implements MigrationInterface {
   name = 'AddProviderMethodsColumn1794520000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-        ALTER TABLE "providers"
-        ADD "methods" jsonb NOT NULL DEFAULT '[]'::jsonb
-    `);
+    await queryRunner.addColumn(
+      'providers',
+      new TableColumn({
+        name: 'methods',
+        type: 'jsonb',
+        default: "'[]'::jsonb",
+      }),
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-        ALTER TABLE "providers"
-        DROP COLUMN "methods"
-    `);
+    await queryRunner.dropColumn('providers', 'methods');
   }
 }

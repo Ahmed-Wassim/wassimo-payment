@@ -1,21 +1,59 @@
-import type { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  Table,
+  TableForeignKey,
+  TableUnique,
+  type MigrationInterface,
+  type QueryRunner,
+} from 'typeorm';
 
 export class CreateCustomers1794655711271 implements MigrationInterface {
   name = 'CreateCustomers1794655711271';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `CREATE TABLE "customers" ("id" uuid NOT NULL DEFAULT gen_random_uuid(), "payment_id" uuid NOT NULL, "name" character varying(255), "email" character varying(255), "phone" character varying(32), "street" character varying(255), "city" character varying(255), "state" character varying(255), "country" character(2), "zip" character varying(32), "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "UQ_customers_payment_id" UNIQUE ("payment_id"), CONSTRAINT "PK_customers_id" PRIMARY KEY ("id"))`,
+    await queryRunner.createTable(
+      new Table({
+        name: 'customers',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            default: 'gen_random_uuid()',
+          },
+          { name: 'payment_id', type: 'uuid' },
+          { name: 'name', type: 'varchar', length: '255', isNullable: true },
+          { name: 'email', type: 'varchar', length: '255', isNullable: true },
+          { name: 'phone', type: 'varchar', length: '32', isNullable: true },
+          { name: 'street', type: 'varchar', length: '255', isNullable: true },
+          { name: 'city', type: 'varchar', length: '255', isNullable: true },
+          { name: 'state', type: 'varchar', length: '255', isNullable: true },
+          { name: 'country', type: 'char', length: '2', isNullable: true },
+          { name: 'zip', type: 'varchar', length: '32', isNullable: true },
+          { name: 'created_at', type: 'timestamptz', default: 'now()' },
+        ],
+        uniques: [
+          new TableUnique({
+            name: 'UQ_customers_payment_id',
+            columnNames: ['payment_id'],
+          }),
+        ],
+      }),
     );
-    await queryRunner.query(
-      `ALTER TABLE "customers" ADD CONSTRAINT "customers_payment_id_fkey" FOREIGN KEY ("payment_id") REFERENCES "payments"("id") ON DELETE CASCADE ON UPDATE NO ACTION`,
+    await queryRunner.createForeignKey(
+      'customers',
+      new TableForeignKey({
+        name: 'customers_payment_id_fkey',
+        columnNames: ['payment_id'],
+        referencedTableName: 'payments',
+        referencedColumnNames: ['id'],
+        onDelete: 'CASCADE',
+        onUpdate: 'NO ACTION',
+      }),
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(
-      `ALTER TABLE "customers" DROP CONSTRAINT "customers_payment_id_fkey"`,
-    );
-    await queryRunner.query(`DROP TABLE "customers"`);
+    await queryRunner.dropForeignKey('customers', 'customers_payment_id_fkey');
+    await queryRunner.dropTable('customers');
   }
 }

@@ -1,35 +1,52 @@
-import type { MigrationInterface, QueryRunner } from 'typeorm';
+import {
+  Table,
+  TableForeignKey,
+  TableUnique,
+  type MigrationInterface,
+  type QueryRunner,
+} from 'typeorm';
 
-export class CreateProviderCredentials1794490000000
-  implements MigrationInterface {
+export class CreateProviderCredentials1794490000000 implements MigrationInterface {
   name = 'CreateProviderCredentials1794490000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-        CREATE TABLE "provider_credentials" (
-            "id" uuid NOT NULL DEFAULT gen_random_uuid(),
-            "provider_account_id" uuid NOT NULL,
-            "encrypted_payload" text NOT NULL,
-            "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-            "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-            CONSTRAINT "UQ_provider_credentials_provider_account_id"
-                UNIQUE ("provider_account_id"),
-            CONSTRAINT "PK_provider_credentials" PRIMARY KEY ("id")
-        )
-    `);
-
-    await queryRunner.query(`
-        ALTER TABLE "provider_credentials"
-        ADD CONSTRAINT "FK_provider_credentials_provider_account_id"
-        FOREIGN KEY ("provider_account_id")
-        REFERENCES "provider_accounts"("id")
-        ON DELETE CASCADE ON UPDATE NO ACTION
-    `);
+    await queryRunner.createTable(
+      new Table({
+        name: 'provider_credentials',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            default: 'gen_random_uuid()',
+          },
+          { name: 'provider_account_id', type: 'uuid' },
+          { name: 'encrypted_payload', type: 'text' },
+          { name: 'created_at', type: 'timestamptz', default: 'now()' },
+          { name: 'updated_at', type: 'timestamptz', default: 'now()' },
+        ],
+        uniques: [
+          new TableUnique({
+            name: 'UQ_provider_credentials_provider_account_id',
+            columnNames: ['provider_account_id'],
+          }),
+        ],
+      }),
+    );
+    await queryRunner.createForeignKey(
+      'provider_credentials',
+      new TableForeignKey({
+        name: 'FK_provider_credentials_provider_account_id',
+        columnNames: ['provider_account_id'],
+        referencedTableName: 'provider_accounts',
+        referencedColumnNames: ['id'],
+        onDelete: 'CASCADE',
+        onUpdate: 'NO ACTION',
+      }),
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`
-        DROP TABLE "provider_credentials"
-    `);
+    await queryRunner.dropTable('provider_credentials');
   }
 }
