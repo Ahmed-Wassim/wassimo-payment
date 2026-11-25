@@ -19,6 +19,7 @@ import {
 import { PROVIDER_CODE } from '../../../provider-code.ts';
 import { ProviderCredentialService } from '../../../credentials/provider-credential.service.ts';
 import { findAttemptForProvider } from '../../provider-attempt.lookup.ts';
+import { PROVIDER_STATUS } from '../../provider-status.ts';
 
 export class PaymobAdapter implements ProviderAdapter {
   readonly providerCode = PROVIDER_CODE.Paymob;
@@ -199,12 +200,7 @@ export class PaymobAdapter implements ProviderAdapter {
     const token = await this.authToken(base, ctx.credentials.api_key);
     const tx = await this.inquiry(base, token, providerReference);
 
-    const result = this.txResult(tx);
-    return {
-      result: result === PROVIDER_RESULT.PENDING
-        ? PROVIDER_RESULT.UNKNOWN
-        : result,
-    };
+    return this.outcome(tx);
   }
 
   async queryStatusByPaymentId(paymentId: string): Promise<Outcome> {
@@ -214,12 +210,7 @@ export class PaymobAdapter implements ProviderAdapter {
     const token = await this.authToken(base, this.bound.credentials.api_key);
     const tx = await this.inquiryByMerchantOrderId(base, token, paymentId);
 
-    const result = this.txResult(tx);
-    return {
-      result: result === PROVIDER_RESULT.PENDING
-        ? PROVIDER_RESULT.UNKNOWN
-        : result,
-    };
+    return this.outcome(tx);
   }
 
   async queryRefundStatus(refundReference: string): Promise<Outcome> {
@@ -245,7 +236,7 @@ export class PaymobAdapter implements ProviderAdapter {
       return { result: PROVIDER_RESULT.UNKNOWN };
     }
 
-    const result = this.txResult(tx);
+    const result = this.resultFromProviderData(tx);
     return {
       result: result === PROVIDER_RESULT.PENDING
         ? PROVIDER_RESULT.UNKNOWN
@@ -287,7 +278,7 @@ export class PaymobAdapter implements ProviderAdapter {
     if (!res.ok) {
       throw new ProviderConfigError(`paymob refund: ${res.status} ${data?.message || ''}`);
     }
-    const result = this.txResult(data);
+    const result = this.resultFromProviderData(data);
     return {
       providerRef: data?.id != null ? String(data.id) : null,
       result: result === PROVIDER_RESULT.PENDING
@@ -296,11 +287,28 @@ export class PaymobAdapter implements ProviderAdapter {
     };
   }
 
-  private txResult(tx: any): ProviderResult {
+  private resultFromProviderData(tx: any): ProviderResult {
     if (tx.success && !tx.pending) return PROVIDER_RESULT.SUCCEEDED;
     if (!tx.success && !tx.pending) return PROVIDER_RESULT.FAILED;
     if (tx.pending) return PROVIDER_RESULT.PENDING;
     return PROVIDER_RESULT.UNKNOWN;
+  }
+
+  private outcome(tx: any): Outcome {
+    const result = this.resultFromProviderData(tx);
+    return {
+      result: result === PROVIDER_RESULT.PENDING
+        ? PROVIDER_RESULT.UNKNOWN
+        : result,
+      failureReason: this.failureReason(tx),
+    };
+  }
+
+  private failureReason(tx: any): string | undefined {
+    return this.resultFromProviderData(tx) === PROVIDER_RESULT.FAILED &&
+      tx.txn_response_code === PROVIDER_STATUS.PAYMOB.DECLINED
+      ? 'declined'
+      : undefined;
   }
 
   private hmacData(tx: any): string {
@@ -425,7 +433,8 @@ export class PaymobAdapter implements ProviderAdapter {
     if (!this.validHmac(tx, creds.hmac_secret, hmac)) return null;
 
     const orderStillOpen = this.orderStillOpen(tx);
-    let result = this.txResult(tx);
+    let result = this.resultFromProviderData(tx);
+    let failureReason = this.failureReason(tx);
     if (result === PROVIDER_RESULT.FAILED && orderStillOpen) return null;
 
     // Trust anchor: re-query the order to confirm the latest transaction state
@@ -435,19 +444,27 @@ export class PaymobAdapter implements ProviderAdapter {
       const authToken = await this.authToken(base, ctx.credentials.api_key);
       const inquired = await this.inquiry(base, authToken, providerReference);
       if (inquired) {
-        const inquiredResult = this.txResult(inquired);
+        const inquiredResult = this.resultFromProviderData(inquired);
         if (
           inquiredResult !== PROVIDER_RESULT.UNKNOWN &&
           !(inquiredResult === PROVIDER_RESULT.FAILED && orderStillOpen)
         ) {
           result = inquiredResult;
+          failureReason = this.failureReason(inquired);
         }
       }
     } catch {
       // fall through to HMAC-verified result
     }
 
-    return { providerEventId: tx.id != null ? String(tx.id) : null, eventType: `transaction.${result}`, result, providerReference, raw: body };
+    return {
+      providerEventId: tx.id != null ? String(tx.id) : null,
+      eventType: `transaction.${result}`,
+      result,
+      providerReference,
+      raw: body,
+      failureReason,
+    };
   }
 
   private orderStillOpen(tx: any): boolean {

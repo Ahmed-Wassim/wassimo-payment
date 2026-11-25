@@ -3,10 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
-import {
-  ProviderOutcomeResult,
-  PROVIDER_RESULT,
-} from '../providers/integrations/adapter.ts';
+import { PROVIDER_RESULT } from '../providers/integrations/adapter.ts';
+import type { Outcome } from '../providers/integrations/adapter.ts';
 import { PaymentProviderFactory } from '../providers/integrations/payment-provider.factory.ts';
 import { ProviderAccountsService } from '../providers/accounts/provider-accounts.service.ts';
 import {
@@ -113,16 +111,17 @@ export class ResolutionService {
 
     const adapter = await this.factory.forAccount(account);
 
-    let outcome: ProviderOutcomeResult = PROVIDER_RESULT.UNKNOWN;
+    let providerOutcome: Outcome = { result: PROVIDER_RESULT.UNKNOWN };
     try {
       if (attempt.providerReference) {
-        outcome = (await adapter.queryStatus(attempt.providerReference)).result;
+        providerOutcome = await adapter.queryStatus(attempt.providerReference);
       } else if (adapter.queryStatusByPaymentId) {
-        outcome = (await adapter.queryStatusByPaymentId(payment.id)).result;
+        providerOutcome = await adapter.queryStatusByPaymentId(payment.id);
       }
     } catch {
-      outcome = PROVIDER_RESULT.UNKNOWN;
+      providerOutcome = { result: PROVIDER_RESULT.UNKNOWN };
     }
+    const outcome = providerOutcome.result;
 
     if (
       outcome !== PROVIDER_RESULT.SUCCEEDED &&
@@ -186,7 +185,7 @@ export class ResolutionService {
         outcome === PROVIDER_RESULT.FAILED &&
         current !== PAYMENT_STATUS.FAILED
       ) {
-        await this.outbox.writeFailed(tx, updated);
+        await this.outbox.writeFailed(tx, updated, providerOutcome.failureReason);
       }
 
       return updated;

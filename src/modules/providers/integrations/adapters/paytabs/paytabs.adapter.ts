@@ -18,6 +18,7 @@ import { ProviderAccount } from '../../../accounts/entity/provider-account.entit
 import { PROVIDER_CODE } from '../../../provider-code.ts';
 import { ProviderCredentialService } from '../../../credentials/provider-credential.service.ts';
 import { findAttemptForProvider } from '../../provider-attempt.lookup.ts';
+import { PROVIDER_STATUS } from '../../provider-status.ts';
 
 export class PaytabsAdapter implements ProviderAdapter {
   readonly providerCode = PROVIDER_CODE.Paytabs;
@@ -145,6 +146,7 @@ export class PaytabsAdapter implements ProviderAdapter {
       result: outcome.result,
       providerReference: String(tranRef),
       raw: parsed,
+      failureReason: outcome.failureReason,
     };
   }
 
@@ -159,11 +161,26 @@ export class PaytabsAdapter implements ProviderAdapter {
 
   private outcomeFromQuery(data: any): Outcome {
     const status = data.payment_result?.response_status || data.response_status;
-    if (status === 'A') return { result: PROVIDER_RESULT.SUCCEEDED };
-    if (status === 'D' || status === 'C') {
-      return { result: PROVIDER_RESULT.FAILED };
+    if (status === PROVIDER_STATUS.PAYTABS.APPROVED) {
+      return { result: PROVIDER_RESULT.SUCCEEDED };
     }
-    return { result: PROVIDER_RESULT.UNKNOWN };
+    switch (status) {
+      case PROVIDER_STATUS.PAYTABS.DECLINED:
+        return { result: PROVIDER_RESULT.FAILED, failureReason: 'declined' };
+      case PROVIDER_STATUS.PAYTABS.CANCELED:
+        return {
+          result: PROVIDER_RESULT.FAILED,
+          failureReason: 'customer_cancelled',
+        };
+      case PROVIDER_STATUS.PAYTABS.EXPIRED:
+        return { result: PROVIDER_RESULT.FAILED, failureReason: 'expired' };
+      case PROVIDER_STATUS.PAYTABS.VOIDED:
+        return { result: PROVIDER_RESULT.FAILED, failureReason: 'voided' };
+      case PROVIDER_STATUS.PAYTABS.ERROR:
+        return { result: PROVIDER_RESULT.FAILED, failureReason: 'provider_error' };
+      default:
+        return { result: PROVIDER_RESULT.UNKNOWN };
+    }
   }
 
   private customerDetails(c: any) {

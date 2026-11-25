@@ -43,7 +43,7 @@ export class OutboxService {
   async writeFailed(
     tx: EntityManager,
     payment: FailedPayment,
-    reason?: { reason_code?: string; message?: string },
+    reasonCode?: string,
   ): Promise<void> {
     await tx.insert(OutboxEvent, {
       eventId: randomUUID(),
@@ -51,8 +51,7 @@ export class OutboxService {
       payload: {
         payment_id: payment.id,
         reference: payment.reference,
-        ...(reason?.reason_code ? { reason_code: reason.reason_code } : {}),
-        ...(reason?.message ? { message: reason.message } : {}),
+        ...(reasonCode ? { reason_code: reasonCode } : {}),
       },
       correlationId: payment.reference ?? payment.id,
       occurredAt: new Date(),

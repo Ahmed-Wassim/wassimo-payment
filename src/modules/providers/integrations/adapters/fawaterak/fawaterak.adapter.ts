@@ -21,6 +21,7 @@ import {
 import { PROVIDER_CODE } from '../../../provider-code.ts';
 import { ProviderCredentialService } from '../../../credentials/provider-credential.service.ts';
 import { findAttemptForProvider } from '../../provider-attempt.lookup.ts';
+import { PROVIDER_STATUS } from '../../provider-status.ts';
 
 export class FawaterakAdapter implements ProviderAdapter {
   readonly providerCode = PROVIDER_CODE.Fawaterak;
@@ -96,16 +97,20 @@ export class FawaterakAdapter implements ProviderAdapter {
 
   async queryStatus(providerReference: string): Promise<Outcome> {
     const { config, credentials } = await this.context(providerReference);
-    const tx = await this.getTransaction(providerReference, config, credentials);
+    const tx = await this.getPaymentData(providerReference, config, credentials);
     const paid = tx?.paid;
     if (paid === 1 || paid === '1' || paid === true) {
       return { result: PROVIDER_RESULT.SUCCEEDED };
     }
     const status = String(tx?.status_text || '').toLowerCase();
-    if (['failed', 'fail', 'expired', 'canceled', 'cancelled'].includes(status)) {
-      return { result: PROVIDER_RESULT.FAILED };
+    const outcome = this.outcomeFromStatus(status);
+    if (outcome.result !== PROVIDER_RESULT.FAILED) {
+      return { result: PROVIDER_RESULT.UNKNOWN };
     }
-    return { result: PROVIDER_RESULT.UNKNOWN };
+    return {
+      result: PROVIDER_RESULT.FAILED,
+      failureReason: outcome.failureReason,
+    };
   }
 
   async refund(input: RefundInput): Promise<RefundResult> {
@@ -119,7 +124,7 @@ export class FawaterakAdapter implements ProviderAdapter {
       throw new ProviderConfigError('fawaterak refund requires a reason');
     }
 
-    const transaction = await this.getTransaction(
+    const transaction = await this.getPaymentData(
       input.providerReference,
       config,
       creds,
@@ -165,7 +170,7 @@ export class FawaterakAdapter implements ProviderAdapter {
     };
   }
 
-  private async getTransaction(
+  private async getPaymentData(
     intentKey: string,
     config: any,
     credentials: Record<string, string>,
@@ -241,9 +246,10 @@ export class FawaterakAdapter implements ProviderAdapter {
     if (!this.safeEqual(expected, String(receivedHash))) return null;
 
     const account = attempt.providerAccount;
-    const tx = await this.getTransaction(providerReference, account.config as any, creds as any).catch(() => null);
+    const tx = await this.getPaymentData(providerReference, account.config as any, creds as any).catch(() => null);
     if (!tx) return null;
-    const result = this.outcomeFromTransaction(tx, status);
+    const outcome = this.outcomeFromProviderData(tx, status);
+    const result = outcome.result;
     if (result === PROVIDER_RESULT.UNKNOWN) return null;
 
     return {
@@ -252,23 +258,44 @@ export class FawaterakAdapter implements ProviderAdapter {
       result,
       providerReference,
       raw: body,
+      failureReason: outcome.failureReason,
     };
   }
 
-  private outcomeFromTransaction(tx: any, fallbackStatus: string): ProviderResult {
+  private outcomeFromProviderData(
+    tx: any,
+    fallbackStatus: string,
+  ): { result: ProviderResult; failureReason?: string } {
     const paid = tx?.paid;
     if (paid === 1 || paid === '1' || paid === true) {
-      return PROVIDER_RESULT.SUCCEEDED;
+      return { result: PROVIDER_RESULT.SUCCEEDED };
     }
-    const status = String(tx?.status_text || tx?.status || fallbackStatus || '').toLowerCase();
-    if (['paid', 'success', 'succeeded'].includes(status)) {
-      return PROVIDER_RESULT.SUCCEEDED;
+    return this.outcomeFromStatus(
+      String(tx?.status_text || tx?.status || fallbackStatus || '').toLowerCase(),
+    );
+  }
+
+  private outcomeFromStatus(status: string): {
+    result: ProviderResult;
+    failureReason?: string;
+  } {
+    switch (status) {
+      case PROVIDER_STATUS.FAWATERAK.PAID:
+        return { result: PROVIDER_RESULT.SUCCEEDED };
+      case PROVIDER_STATUS.FAWATERAK.EXPIRED:
+        return { result: PROVIDER_RESULT.FAILED, failureReason: 'expired' };
+      case PROVIDER_STATUS.FAWATERAK.CANCELED:
+        return {
+          result: PROVIDER_RESULT.FAILED,
+          failureReason: 'customer_cancelled',
+        };
+      case PROVIDER_STATUS.FAWATERAK.FAILED:
+        return { result: PROVIDER_RESULT.FAILED };
+      case PROVIDER_STATUS.FAWATERAK.PENDING:
+        return { result: PROVIDER_RESULT.PENDING };
+      default:
+        return { result: PROVIDER_RESULT.UNKNOWN };
     }
-    if (['failed', 'fail', 'expired', 'canceled', 'cancelled'].includes(status)) {
-      return PROVIDER_RESULT.FAILED;
-    }
-    if (status === 'pending') return PROVIDER_RESULT.PENDING;
-    return PROVIDER_RESULT.UNKNOWN;
   }
 
   private parseBody(headers: Record<string, string>, rawBody: Buffer): any | null {

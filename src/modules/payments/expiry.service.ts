@@ -51,7 +51,7 @@ export class ExpiryService implements OnModuleInit, OnModuleDestroy {
           await this.outbox.writeFailed(
             tx,
             { id: row.id, reference: row.reference },
-            { reason_code: 'expired' },
+            'expired',
           );
         }
 

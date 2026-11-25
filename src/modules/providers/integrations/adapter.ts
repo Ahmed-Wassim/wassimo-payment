@@ -59,6 +59,7 @@ export type ProviderOutcomeResult = Exclude<
 
 export interface Outcome {
   result: ProviderOutcomeResult;
+  failureReason?: string;
 }
 
 export interface RefundInput {
@@ -80,6 +81,7 @@ export interface ProviderEvent {
   result: ProviderResult;
   providerReference: string | null;
   raw: unknown;
+  failureReason?: string;
 }
 
 import type { CustomerDetails } from '../../customers/customer-details.ts';

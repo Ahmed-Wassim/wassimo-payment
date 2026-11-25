@@ -89,6 +89,7 @@ export class WebhooksService {
       row.id,
       attempt,
       target,
+      event.failureReason,
     );
     return { status };
   }
@@ -145,6 +146,7 @@ export class WebhooksService {
       ProviderResult,
       typeof PROVIDER_RESULT.PENDING | typeof PROVIDER_RESULT.UNKNOWN
     > | null,
+    failureReason?: string,
   ): Promise<WebhookEventStatus> {
     if (!attempt || !target) {
       const reason = !attempt ? 'unmatched_reference' : 'event_carries_no_outcome';
@@ -212,7 +214,7 @@ export class WebhooksService {
         if (target === PROVIDER_RESULT.SUCCEEDED) {
           await this.outbox.writeSucceeded(tx, updated);
         } else {
-          await this.outbox.writeFailed(tx, updated);
+          await this.outbox.writeFailed(tx, updated, failureReason);
         }
       }
 
