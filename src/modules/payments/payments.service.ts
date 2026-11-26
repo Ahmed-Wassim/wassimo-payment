@@ -12,6 +12,7 @@ import { isUuid } from '../../common/utils/is-uuid.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { CurrenciesService } from '../currencies/currencies.service.ts';
 import { ProviderAccountsService } from '../providers/accounts/provider-accounts.service.ts';
+import { ensureProviderAccountEligible } from '../providers/accounts/eligibility/provider-account-eligibility.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
 import { Payment } from './entities/payment.entity.ts';
 import { CustomersService } from '../customers/customers.service.ts';
@@ -51,14 +52,11 @@ export class PaymentsService {
     ) {
       throw new ApiError('provider_account_not_found', HttpStatus.NOT_FOUND, 'unknown provider account for this application');
     }
-    const ineligible: string[] = [];
-    if (account.status !== 'enabled') ineligible.push('account_disabled');
-    if (account.environment !== auth.environment) ineligible.push('environment_mismatch');
-    if (!account.supportedCurrencies.includes(dto.currency.toUpperCase())) ineligible.push('currency_unsupported');
-    if (!account.supportedMethods.includes(dto.method)) ineligible.push('method_unsupported');
-    if (ineligible.length > 0) {
-      throw new ApiError('provider_account_not_eligible', HttpStatus.CONFLICT, 'the selected provider account cannot process this payment', { reasons: ineligible });
-    }
+    ensureProviderAccountEligible(account, {
+      environment: auth.environment,
+      currency: dto.currency,
+      method: dto.method,
+    });
 
     try {
       const payment = await em.save(Payment, {
@@ -99,6 +97,28 @@ export class PaymentsService {
     };
     if (auth.applicationId) where.applicationId = auth.applicationId;
     return this.repo.findOne({ where });
+  }
+
+  async requireById(
+    id: string,
+    auth: { organizationId: string; applicationId?: string },
+  ): Promise<Payment> {
+    if (!isUuid(id)) {
+      throw new ApiError(
+        'validation_error',
+        HttpStatus.BAD_REQUEST,
+        'malformed payment id',
+      );
+    }
+    const payment = await this.loadById(id, auth);
+    if (!payment) {
+      throw new ApiError(
+        'not_found',
+        HttpStatus.NOT_FOUND,
+        'payment not found',
+      );
+    }
+    return payment;
   }
 
   async loadByIdForActor(

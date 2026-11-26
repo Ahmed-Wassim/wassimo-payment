@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
@@ -21,7 +21,6 @@ import {
   transition,
 } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
-import { isUuid } from '../../common/utils/is-uuid.ts';
 import { OutboxService } from '../../outbox/outbox.service.ts';
 
 @Injectable()
@@ -36,22 +35,7 @@ export class ResolutionService {
   ) {}
 
   async resolve(auth: AuthContext, paymentId: string): Promise<Payment> {
-    if (!isUuid(paymentId)) {
-      throw new ApiError(
-        'validation_error',
-        HttpStatus.BAD_REQUEST,
-        'malformed payment id',
-      );
-    }
-
-    const payment = await this.payments.loadById(paymentId, auth);
-    if (!payment) {
-      throw new ApiError(
-        'not_found',
-        HttpStatus.NOT_FOUND,
-        'payment not found',
-      );
-    }
+    const payment = await this.payments.requireById(paymentId, auth);
 
     if (
       payment.status === PAYMENT_STATUS.SUCCEEDED ||
@@ -88,26 +72,10 @@ export class ResolutionService {
       );
     }
 
-    let account;
-    try {
-      account = await this.providers.requireById(attempt.providerAccount.id);
-    } catch (e) {
-      if (e instanceof NotFoundException) {
-        throw new ApiError(
-          'provider_account_not_found',
-          HttpStatus.NOT_FOUND,
-          'unknown provider account for this organization',
-        );
-      }
-      throw e;
-    }
-    if (account.organization.id !== payment.organizationId) {
-      throw new ApiError(
-        'provider_account_not_found',
-        HttpStatus.NOT_FOUND,
-        'unknown provider account for this organization',
-      );
-    }
+    const account = await this.providers.requireInScope(
+      attempt.providerAccount.id,
+      { organizationId: payment.organizationId },
+    );
 
     const adapter = await this.factory.forAccount(account);
 
