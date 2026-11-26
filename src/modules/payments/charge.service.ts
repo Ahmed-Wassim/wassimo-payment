@@ -9,7 +9,7 @@ import {
 } from '../providers/integrations/adapter.ts';
 import { PaymentProviderFactory } from '../providers/integrations/payment-provider.factory.ts';
 import { ProviderAccountsService } from '../providers/accounts/provider-accounts.service.ts';
-import { PROVIDER_ACCOUNT_STATUS } from '../providers/accounts/entity/provider-account.entity.ts';
+import { ensureProviderAccountEligible } from '../providers/accounts/eligibility/provider-account-eligibility.ts';
 import {
   ATTEMPT_STATUS,
   attemptTransition,
@@ -93,23 +93,11 @@ export class ChargeService {
       );
     }
 
-    const reasons: string[] = [];
-    if (account.status !== PROVIDER_ACCOUNT_STATUS.ENABLED)
-      reasons.push('account_disabled');
-    if (account.environment !== auth.environment)
-      reasons.push('environment_mismatch');
-    if (!account.supportedCurrencies.includes(payment.currency.toUpperCase()))
-      reasons.push('currency_unsupported');
-    if (!account.supportedMethods.includes(payment.method))
-      reasons.push('method_unsupported');
-    if (reasons.length) {
-      throw new ApiError(
-        'provider_account_not_eligible',
-        HttpStatus.CONFLICT,
-        'the selected provider account cannot process this payment',
-        { reasons },
-      );
-    }
+    ensureProviderAccountEligible(account, {
+      environment: auth.environment,
+      currency: payment.currency,
+      method: payment.method,
+    });
 
     const adapter = await this.factory.forAccount(account);
     const customer = await this.customers.forPayment(payment.id);
