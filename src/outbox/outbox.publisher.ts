@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as amqp from 'amqplib';
-import { Repository } from 'typeorm';
+import { LessThanOrEqual, Repository } from 'typeorm';
 import { APP_CONFIG } from '../config/config.module.ts';
 import type { AppConfig } from '../config/configuration.ts';
 import { EVENTS_EXCHANGE } from '../events/envelope.ts';
@@ -41,22 +41,20 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
 
   private async claimBatch(limit: number): Promise<OutboxEvent[]> {
     return this.outbox.manager.transaction(async (tx) => {
-      const batch = await tx
-        .createQueryBuilder(OutboxEvent, 'o')
-        .setLock('pessimistic_write')
-        .setOnLocked('skip_locked')
-        .where("o.status = 'pending' AND o.nextAttemptAt <= now()")
-        .orderBy('o.createdAt', 'ASC')
-        .take(limit)
-        .getMany();
+      const batch = await tx.find(OutboxEvent, {
+        where: {
+          status: 'pending',
+          nextAttemptAt: LessThanOrEqual(new Date()),
+        },
+        order: { createdAt: 'ASC' },
+        take: limit,
+        lock: { mode: 'pessimistic_write', onLocked: 'skip_locked' },
+      });
 
       if (batch.length) {
-        await tx
-          .createQueryBuilder()
-          .update(OutboxEvent)
-          .set({ nextAttemptAt: () => "now() + interval '30 seconds'" })
-          .whereInIds(batch.map((r) => r.id))
-          .execute();
+        const retryAt = new Date(Date.now() + 30_000);
+        for (const row of batch) row.nextAttemptAt = retryAt;
+        await tx.save(OutboxEvent, batch);
       }
 
       return batch;
@@ -112,13 +110,12 @@ export class OutboxPublisherService implements OnModuleInit, OnModuleDestroy {
   private async markFailed(row: OutboxEvent, error: string): Promise<void> {
     const attempts = row.attempts + 1;
     const delay = Math.min(300, 2 ** attempts);
-    await this.outbox.query(
-      `UPDATE outbox_events
-          SET status = 'pending', attempts = $2, last_error = $3,
-              next_attempt_at = now() + ($4::int * interval '1 second')
-        WHERE id = $1`,
-      [row.id, attempts, error.slice(0, 500), delay],
-    );
+    await this.outbox.update(row.id, {
+      status: 'pending',
+      attempts,
+      lastError: error.slice(0, 500),
+      nextAttemptAt: new Date(Date.now() + delay * 1000),
+    });
   }
 
   private async close(ch?: amqp.ConfirmChannel, conn?: amqp.ChannelModel): Promise<void> {
