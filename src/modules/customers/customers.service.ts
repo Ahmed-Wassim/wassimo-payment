@@ -4,8 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { Customer } from './entities/customer.entity.ts';
+import { Payment } from '../payments/entities/payment.entity.ts';
 import { toCustomerModel, CustomerModel } from './mappers/customer.mapper.ts';
 import { FilterDto } from '../../common/dto/filter.dto.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
@@ -28,6 +29,8 @@ export class CustomersService {
   constructor(
     @InjectRepository(Customer)
     private readonly repo: Repository<Customer>,
+    @InjectRepository(Payment)
+    private readonly payments: Repository<Payment>,
   ) {}
 
   async createSnapshotForPayment(
@@ -57,21 +60,20 @@ export class CustomersService {
       ? filter.organizationId ?? null
       : actor.organizationId;
 
-    const qb = this.repo
-      .createQueryBuilder('c')
-      .innerJoin('payments', 'p', 'p.id = c.payment_id')
-      .orderBy('c.created_at', 'ASC');
+    const paymentWhere = {
+      ...(organizationId ? { organizationId } : {}),
+      ...(filter.applicationId ? { applicationId: filter.applicationId } : {}),
+    };
+    const payments = await this.payments.find({
+      select: { id: true },
+      where: paymentWhere,
+    });
+    if (payments.length === 0) return [];
 
-    if (organizationId) {
-      qb.andWhere('p.organization_id = :organizationId', { organizationId });
-    }
-    if (filter.applicationId) {
-      qb.andWhere('p.application_id = :applicationId', {
-        applicationId: filter.applicationId,
-      });
-    }
-
-    const rows = await qb.getMany();
+    const rows = await this.repo.find({
+      where: { paymentId: In(payments.map(({ id }) => id)) },
+      order: { createdAt: 'ASC' },
+    });
     return rows.map((row) => toCustomerModel(row));
   }
 
@@ -79,20 +81,23 @@ export class CustomersService {
     if (!isUuid(id)) {
       throw new BadRequestException('malformed customer id');
     }
-
-    const qb = this.repo
-      .createQueryBuilder('c')
-      .innerJoin('payments', 'p', 'p.id = c.payment_id')
-      .where('c.id = :id', { id });
-
-    if (!actor.isSuperAdmin) {
-      qb.andWhere('p.organization_id = :organizationId', {
-        organizationId: actor.organizationId,
-      });
+    if (!actor.isSuperAdmin && !actor.organizationId) {
+      throw new NotFoundException(`Customer not found ${id}`);
     }
 
-    const row = await qb.getOne();
-    if (!row) {
+    const row = await this.repo.findOneBy({ id });
+    const payment = row
+      ? await this.payments.findOne({
+          where: {
+            id: row.paymentId,
+            ...(!actor.isSuperAdmin
+              ? { organizationId: actor.organizationId ?? undefined }
+              : {}),
+          },
+          select: { id: true },
+        })
+      : null;
+    if (!row || !payment) {
       throw new NotFoundException(`Customer not found ${id}`);
     }
 
