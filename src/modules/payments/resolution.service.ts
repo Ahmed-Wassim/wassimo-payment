@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
 import { PROVIDER_RESULT } from '../providers/integrations/adapter.ts';
@@ -52,17 +52,16 @@ export class ResolutionService {
     const selectableStatuses: AttemptStatus[] = recoverable
       ? [ATTEMPT_STATUS.FAILED]
       : [ATTEMPT_STATUS.UNKNOWN, ATTEMPT_STATUS.INITIATED];
-    const attempt = await this.attempts
-      .createQueryBuilder('a')
-      .leftJoinAndSelect('a.providerAccount', 'providerAccount')
-      .where('a.payment_id = :pid', { pid: payment.id })
-      .andWhere('a.status IN (:...statuses)', {
-        statuses: selectableStatuses,
-      })
-      .orderBy('CASE WHEN a.status = :unknown THEN 0 ELSE 1 END')
-      .setParameter('unknown', ATTEMPT_STATUS.UNKNOWN)
-      .addOrderBy('a.createdAt', 'ASC')
-      .getOne();
+    const attempts = await this.attempts.find({
+      where: { payment: { id: payment.id }, status: In(selectableStatuses) },
+      relations: { providerAccount: true },
+      order: { createdAt: 'ASC' },
+    });
+    const attempt = attempts.sort((a, b) => {
+      const aPriority = a.status === ATTEMPT_STATUS.UNKNOWN ? 0 : 1;
+      const bPriority = b.status === ATTEMPT_STATUS.UNKNOWN ? 0 : 1;
+      return aPriority - bPriority;
+    })[0];
 
     if (!attempt) {
       throw new ApiError(

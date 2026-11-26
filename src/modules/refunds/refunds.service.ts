@@ -1,7 +1,6 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
-import { AuthContext } from '../auth/auth-context.ts';
 import { ApiError } from '../../common/errors/api-error.ts';
 import { isUuid } from '../../common/utils/is-uuid.ts';
 import { PaymentProviderFactory } from '../providers/integrations/payment-provider.factory.ts';
@@ -21,7 +20,6 @@ import {
 import {
   REFUND_STATUS,
   refundTransition,
-  type RefundStatus,
 } from './refund-states.ts';
 import { Refund } from './entities/refund.entity.ts';
 
@@ -62,13 +60,14 @@ export class RefundsService {
       );
     }
 
-    const attempt = await this.attempts
-      .createQueryBuilder('a')
-      .leftJoinAndSelect('a.providerAccount', 'providerAccount')
-      .where('a.payment_id = :pid', { pid: payment.id })
-      .andWhere('a.status = :status', { status: ATTEMPT_STATUS.SUCCEEDED })
-      .orderBy('a.created_at', 'DESC')
-      .getOne();
+    const attempt = await this.attempts.findOne({
+      where: {
+        payment: { id: payment.id },
+        status: ATTEMPT_STATUS.SUCCEEDED,
+      },
+      relations: { providerAccount: true },
+      order: { createdAt: 'DESC' },
+    });
     if (!attempt || !attempt.providerReference) {
       throw new ApiError(
         'refund_not_allowed',

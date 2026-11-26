@@ -142,20 +142,13 @@ export class PaymentsService {
       : actor.organizationId;
     if (!actor.isSuperAdmin && !organizationId) return [];
 
-    const qb = this.repo
-      .createQueryBuilder('p')
-      .orderBy('p.created_at', 'DESC');
-
-    if (organizationId) {
-      qb.andWhere('p.organization_id = :organizationId', { organizationId });
-    }
-    if (filter.applicationId) {
-      qb.andWhere('p.application_id = :applicationId', {
-        applicationId: filter.applicationId,
-      });
-    }
-
-    const rows = await qb.getMany();
+    const rows = await this.repo.find({
+      where: {
+        ...(organizationId ? { organizationId } : {}),
+        ...(filter.applicationId ? { applicationId: filter.applicationId } : {}),
+      },
+      order: { createdAt: 'DESC' },
+    });
     return Promise.all(
       rows.map(async (row) =>
         toPaymentModel(row, await this.customers.forPayment(row.id)),
