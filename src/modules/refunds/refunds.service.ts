@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
@@ -45,13 +45,6 @@ export class RefundsService {
     paymentId: string,
     dto: { amount_minor: number; reason?: string },
   ): Promise<{ refund: Refund; raceLost: boolean }> {
-    if (!isUuid(paymentId)) {
-      throw new ApiError(
-        'validation_error',
-        HttpStatus.BAD_REQUEST,
-        'malformed payment id',
-      );
-    }
     if (!Number.isSafeInteger(dto.amount_minor) || dto.amount_minor <= 0) {
       throw new ApiError(
         'validation_error',
@@ -60,14 +53,7 @@ export class RefundsService {
       );
     }
 
-    const payment = await this.payments.loadById(paymentId, auth);
-    if (!payment) {
-      throw new ApiError(
-        'not_found',
-        HttpStatus.NOT_FOUND,
-        'payment not found',
-      );
-    }
+    const payment = await this.payments.requireById(paymentId, auth);
     if (payment.status !== PAYMENT_STATUS.SUCCEEDED) {
       throw new ApiError(
         'refund_not_allowed',
@@ -91,26 +77,10 @@ export class RefundsService {
       );
     }
 
-    let account;
-    try {
-      account = await this.providers.requireById(attempt.providerAccount.id);
-    } catch (e) {
-      if (e instanceof NotFoundException) {
-        throw new ApiError(
-          'provider_account_not_found',
-          HttpStatus.NOT_FOUND,
-          'unknown provider account for this organization',
-        );
-      }
-      throw e;
-    }
-    if (account.organization.id !== payment.organizationId) {
-      throw new ApiError(
-        'provider_account_not_found',
-        HttpStatus.NOT_FOUND,
-        'unknown provider account for this organization',
-      );
-    }
+    const account = await this.providers.requireInScope(
+      attempt.providerAccount.id,
+      { organizationId: payment.organizationId },
+    );
     if (
       account.providerCode === PROVIDER_CODE.Fawaterak &&
       !dto.reason?.trim()
@@ -279,19 +249,10 @@ export class RefundsService {
         'unknown provider account for this organization',
       );
     }
-    let account;
-    try {
-      account = await this.providers.requireById(attempt.providerAccount.id);
-    } catch (e) {
-      if (e instanceof NotFoundException) {
-        throw new ApiError(
-          'provider_account_not_found',
-          HttpStatus.NOT_FOUND,
-          'unknown provider account for this organization',
-        );
-      }
-      throw e;
-    }
+    const account = await this.providers.requireInScope(
+      attempt.providerAccount.id,
+      { organizationId: payment.organizationId },
+    );
     const adapter = await this.factory.forAccount(account);
     let outcome: ProviderOutcomeResult = PROVIDER_RESULT.UNKNOWN;
     if (adapter.queryRefundStatus) {

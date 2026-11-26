@@ -99,6 +99,28 @@ export class PaymentsService {
     return this.repo.findOne({ where });
   }
 
+  async requireById(
+    id: string,
+    auth: { organizationId: string; applicationId?: string },
+  ): Promise<Payment> {
+    if (!isUuid(id)) {
+      throw new ApiError(
+        'validation_error',
+        HttpStatus.BAD_REQUEST,
+        'malformed payment id',
+      );
+    }
+    const payment = await this.loadById(id, auth);
+    if (!payment) {
+      throw new ApiError(
+        'not_found',
+        HttpStatus.NOT_FOUND,
+        'payment not found',
+      );
+    }
+    return payment;
+  }
+
   async loadByIdForActor(
     id: string,
     actor: Actor,

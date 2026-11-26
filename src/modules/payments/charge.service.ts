@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AuthContext } from '../auth/auth-context.ts';
@@ -21,7 +21,6 @@ import { PaymentAttempt } from './entities/payment-attempt.entity.ts';
 import { Payment } from './entities/payment.entity.ts';
 import { PAYMENT_STATUS, transition } from './states.ts';
 import { PaymentsService } from './payments.service.ts';
-import { isUuid } from '../../common/utils/is-uuid.ts';
 import { CustomersService } from '../customers/customers.service.ts';
 import { toCustomerDetails } from '../customers/mappers/customer-details.mapper.ts';
 
@@ -41,22 +40,7 @@ export class ChargeService {
     paymentId: string,
     returnUrl?: string | null,
   ): Promise<{ attempt_id: string; redirect_url: string | null }> {
-    if (!isUuid(paymentId)) {
-      throw new ApiError(
-        'validation_error',
-        HttpStatus.BAD_REQUEST,
-        'malformed payment id',
-      );
-    }
-
-    const payment = await this.payments.loadById(paymentId, auth);
-    if (!payment) {
-      throw new ApiError(
-        'not_found',
-        HttpStatus.NOT_FOUND,
-        'payment not found',
-      );
-    }
+    const payment = await this.payments.requireById(paymentId, auth);
     if (payment.status !== PAYMENT_STATUS.CREATED) {
       throw this.notChargeable(
         `payment status is '${payment.status}'; only 'created' payments charge`,
@@ -68,30 +52,13 @@ export class ChargeService {
       );
     }
 
-    let account;
-    try {
-      account = await this.providers.requireById(payment.providerAccountId);
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw new ApiError(
-          'provider_account_not_found',
-          HttpStatus.NOT_FOUND,
-          'unknown provider account for this organization',
-        );
-      }
-      throw error;
-    }
-
-    if (
-      account.organization.id !== payment.organizationId ||
-      account.application.id !== payment.applicationId
-    ) {
-      throw new ApiError(
-        'provider_account_not_found',
-        HttpStatus.NOT_FOUND,
-        'unknown provider account for this organization',
-      );
-    }
+    const account = await this.providers.requireInScope(
+      payment.providerAccountId,
+      {
+        organizationId: payment.organizationId,
+        applicationId: payment.applicationId,
+      },
+    );
 
     ensureProviderAccountEligible(account, {
       environment: auth.environment,

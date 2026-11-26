@@ -24,7 +24,6 @@ import { ResolutionService } from './resolution.service.ts';
 import { PaymentsService } from './payments.service.ts';
 import { toPaymentModel } from './mappers/payment.mapper.ts';
 import { CreatePaymentDto } from './dto/create-payment.dto.ts';
-import { isUuid } from '../../common/utils/is-uuid.ts';
 
 @Controller()
 export class PaymentsController {
@@ -71,18 +70,7 @@ export class PaymentsController {
   @UseGuards(ApiKeyGuard)
   @ApiScope('payments:read')
   async get(@Req() req: { auth?: AuthContext }, @Param('id') id: string) {
-    if (!isUuid(id)) {
-      throw new ApiError(
-        'validation_error',
-        HttpStatus.BAD_REQUEST,
-        'malformed payment id',
-      );
-    }
-
-    const payment = await this.payments.loadById(id, req.auth!);
-    if (!payment) {
-      throw new ApiError('not_found', HttpStatus.NOT_FOUND, 'payment not found');
-    }
+    const payment = await this.payments.requireById(id, req.auth!);
 
     return toPaymentModel(payment, await this.payments.customerFor(id));
   }

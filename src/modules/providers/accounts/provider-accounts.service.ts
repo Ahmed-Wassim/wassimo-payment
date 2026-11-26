@@ -24,6 +24,11 @@ import {
   toProviderAccountModel,
 } from './mapper/provider-account.mapper.ts';
 
+export interface ProviderAccountScope {
+  organizationId: string;
+  applicationId?: string;
+}
+
 @Injectable()
 export class ProviderAccountsService {
   constructor(
@@ -95,6 +100,36 @@ export class ProviderAccountsService {
     });
     if (!row) throw new NotFoundException(`Provider account not found ${id}`);
     return row;
+  }
+
+  async requireInScope(
+    accountId: string,
+    scope: ProviderAccountScope,
+  ): Promise<ProviderAccount> {
+    let account: ProviderAccount;
+    try {
+      account = await this.requireById(accountId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw new ApiError(
+          'provider_account_not_found',
+          HttpStatus.NOT_FOUND,
+          'unknown provider account for this organization',
+        );
+      }
+      throw error;
+    }
+    if (
+      account.organization.id !== scope.organizationId ||
+      (scope.applicationId && account.application.id !== scope.applicationId)
+    ) {
+      throw new ApiError(
+        'provider_account_not_found',
+        HttpStatus.NOT_FOUND,
+        'unknown provider account for this organization',
+      );
+    }
+    return account;
   }
 
   async requireByIdForActor(
